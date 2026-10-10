@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLECULE AI — Quantum Molecular Discovery & Covalent Reaction Suite</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#030712',
+                            panel: 'rgba(11, 19, 38, 0.72)',
+                            cyan: '#38bdf8',
+                            neon: '#00f0ff',
+                            purple: '#a855f7',
+                            emerald: '#10b981',
+                            rose: '#f43f5e',
+                            amber: '#f59e0b',
+                            border: 'rgba(255, 255, 255, 0.08)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        .svg-depict-box {
+            width: 100%;
+            height: 125px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .svg-depict-box svg {
+            width: 100% !important;
+            height: 100% !important;
+            max-height: 120px;
+            object-fit: contain;
+            display: block;
+            margin: auto;
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(168, 85, 247, 0.22));
+            border-color: #38bdf8;
+            color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-3 sm:p-5 lg:p-7">
+
+    <header class="w-full max-w-7xl flex flex-col items-center text-center my-2 mb-6">
+        <!-- Telemetry Chips -->
+        <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-4 py-2 rounded-full bg-slate-950/80 border border-slate-800 shadow-2xl backdrop-blur-xl mb-4">
+            <span class="flex items-center gap-2 text-[11px] font-mono text-cyan-400">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                <span>GIN + SchNet 3D Engine: <strong class="text-slate-100">ONLINE</strong></span>
+            </span>
+            <span class="text-slate-700 hidden sm:inline">|</span>
+            <span class="flex items-center gap-1.5 text-[11px] font-mono text-purple-400">
+                <i class="fa-solid fa-microchip text-xs"></i>
+                <span>Gemini Intelligence: <strong class="text-purple-300">CONNECTED</strong></span>
+            </span>
+            <span class="text-slate-700 hidden sm:inline">|</span>
+            <span class="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
+                <i class="fa-solid fa-shield-virus text-xs"></i>
+                <span>128 PubChem Assays Active</span>
+            </span>
+            <span class="text-slate-700 hidden md:inline">|</span>
+            <button onclick="openPeriodicModal()" class="flex items-center gap-1 text-[11px] font-mono text-amber-400 hover:text-amber-300 transition hover:underline">
+                <i class="fa-solid fa-table-cells text-xs"></i> Interactive Periodic Table
+            </button>
+        </div>
+
+        <!-- Master Title Branding -->
+        <div class="flex items-center justify-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid fa-atom text-white text-lg animate-spin" style="animation-duration: 12s;"></i>
+            </div>
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-200 to-purple-400">
+                MOLECULE AI
+            </h1>
+        </div>
+        <p class="text-slate-400 text-xs sm:text-sm mt-1.5 max-w-2xl font-mono">
+            Quantum Molecular Discovery • Continuous-Filter 3D GNN • Covalent Reaction Fusion Engine
+        </p>
+
+        <!-- Dynamic Workspace Tabs -->
+        <div class="flex flex-wrap justify-center gap-2 p-1.5 bg-slate-950/90 border border-slate-800 rounded-2xl mt-5 shadow-2xl backdrop-blur-xl">
+            <button onclick="switchTab('explorer')" id="tabExplorer" class="nav-tab active px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2">
+                <i class="fa-solid fa-atom"></i> 3D Molecular Explorer
+            </button>
+            <button onclick="switchTab('labReactor')" id="tabReactor" class="nav-tab px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-200 border border-transparent transition flex items-center gap-2">
+                <i class="fa-solid fa-flask-vial text-purple-400"></i> Virtual Reaction Chamber
+            </button>
+            <button onclick="switchTab('atomEditor')" id="tabEditor" class="nav-tab px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-200 border border-transparent transition flex items-center gap-2">
+                <i class="fa-solid fa-scissors text-rose-400"></i> Atomic Mutation Sandbox
+            </button>
+            <button onclick="openPeriodicModal()" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-400/60 bg-amber-950/20 transition flex items-center gap-2">
+                <i class="fa-solid fa-table-cells"></i> Interactive Periodic Table
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-7xl space-y-7">
+
+        <!-- TAB 1: 3D MOLECULE EXPLORER -->
+        <div id="sectionExplorer" class="space-y-6">
+            <div class="ultra-glass glow-border-cyan rounded-2xl p-5 shadow-2xl relative z-30">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2.5">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass text-cyan-400"></i> Search Compound Name or Enter SMILES
+                    </label>
+                    <div class="flex items-center gap-2 text-[11px] font-mono text-slate-500">
+                        <span>Presets:</span>
+                        <button onclick="loadPreset('Aspirin')" class="text-cyan-400 hover:underline">Aspirin</button>
+                        <span>•</span>
+                        <button onclick="loadPreset('Caffeine')" class="text-cyan-400 hover:underline">Caffeine</button>
+                        <span>•</span>
+                        <button onclick="loadPreset('Ibuprofen')" class="text-cyan-400 hover:underline">Ibuprofen</button>
+                        <span>•</span>
+                        <button onclick="loadPreset('Dopamine')" class="text-cyan-400 hover:underline">Dopamine</button>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <div class="flex items-center bg-slate-950/90 border border-slate-700/80 rounded-2xl overflow-hidden focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400 transition shadow-inner">
+                        <span class="pl-4 text-cyan-400"><i class="fa-solid fa-dna"></i></span>
+                        <input type="text" id="smilesInput" value="CC(=O)Oc1ccccc1C(=O)O" autocomplete="off"
+                            placeholder="Search drug (e.g., Aspirin, Paracetamol, Atorvastatin) or paste SMILES..."
+                            class="w-full bg-transparent px-4 py-4 text-slate-100 font-mono text-sm focus:outline-none">
+                        <button onclick="clearSearch()" class="px-4 text-slate-500 hover:text-slate-300">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div id="autocompleteDropdown" class="absolute left-0 right-0 top-full mt-2 bg-slate-900/95 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-2xl hidden z-50">
+                        <div id="autocompleteList" class="divide-y divide-slate-800"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-7 ultra-glass rounded-2xl p-5 shadow-2xl flex flex-col justify-between">
+                    <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-cube text-cyan-400"></i> Interactive 3D Conformer
+                        </span>
+                        <div class="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs font-mono">
+                            <button onclick="setStyle('stick')" id="btnStyleStick" class="px-2.5 py-1 rounded-lg text-cyan-300 font-semibold bg-cyan-950/80 border border-cyan-500/30">Stick</button>
+                            <button onclick="setStyle('sphere')" id="btnStyleSphere" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-200">Sphere</button>
+                            <button onclick="setStyle('wire')" id="btnStyleWire" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-200">Wire</button>
+                            <span class="text-slate-700">|</span>
+                            <button onclick="toggleSpin()" id="spinBtn" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-cyan-400"><i class="fa-solid fa-play"></i> Auto-Spin</button>
+                        </div>
+                    </div>
+
+                    <div class="mol-viewport relative" id="molViewport">
+                        <div id="loader" class="absolute inset-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm z-10 hidden">
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                                <span class="text-xs font-mono text-cyan-300 tracking-wider">COMPUTING 3D GEOMETRY...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-5 ultra-glass rounded-2xl p-5 shadow-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-draw-polygon text-indigo-400"></i> 2D Chemical Topology
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-500">RDKit Canonical Depiction</span>
+                        </div>
+                        <div class="w-full h-32 bg-slate-950/90 rounded-xl border border-slate-800/80 p-2 mb-3 svg-depict-box" id="svgContainer"></div>
+
+                        <div class="space-y-2 font-mono text-xs">
+                            <div class="flex justify-between items-center p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                                <span class="text-slate-400">Formula / MW</span>
+                                <span class="font-bold text-cyan-300"><span id="propFormula">-</span> • <span id="propMW">-</span> g/mol</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                                <span class="text-slate-400">LogP (Lipophilicity)</span>
+                                <span class="font-bold text-purple-300" id="propLogP">-</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                                <span class="text-slate-400">TPSA (Polar Surface Area)</span>
+                                <span class="font-bold text-indigo-300" id="propTPSA">- Å²</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                                <span class="text-slate-400">H-Bond Donors / Acceptors</span>
+                                <span class="font-bold text-slate-200" id="propHB">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="analyzeBtn" onclick="runInference()" class="mt-4 w-full py-4 bg-gradient-to-r from-cyan-500 via-sky-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-black rounded-xl shadow-lg shadow-cyan-500/25 transition transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> RUN 3D GNN SCREENING
+                    </button>
+                </div>
+            </div>
+
+            <!-- Gemini Report -->
+            <div class="ultra-glass glow-border-cyan rounded-2xl p-6 shadow-2xl">
+                <div class="flex items-center gap-3 border-b border-slate-800 pb-3 mb-4">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                        <i class="fa-solid fa-wand-magic-sparkles text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider">Gemini Automated Pharmacological Dossier</h3>
+                        <p class="text-[11px] text-slate-400 font-mono">LLM-Synthesized Pharmacokinetics, Solvation & Safety Evaluation</p>
+                    </div>
+                </div>
+                <div id="aiReportContainer" class="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans bg-slate-950/70 p-4 sm:p-5 rounded-xl border border-slate-800/80">
+                    <span class="text-slate-500 italic font-mono">Run screening to synthesize pharmacological report...</span>
+                </div>
+            </div>
+
+            <!-- Bioactivity Results -->
+            <div class="ultra-glass rounded-2xl p-6 shadow-2xl space-y-6">
+                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2 border-b border-slate-800 pb-4">
+                    <i class="fa-solid fa-microscope text-cyan-400"></i> AI Multi-Task Toxicity & Bioactivity Results
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    <div class="md:col-span-8 grid grid-cols-3 gap-3 sm:gap-4">
+                        <div class="bg-rose-950/25 border border-rose-500/30 rounded-2xl p-4 text-center">
+                            <div class="text-xs text-rose-400 font-bold uppercase tracking-wider">High Risk / Active</div>
+                            <div class="text-3xl sm:text-4xl font-black text-rose-400 mt-1.5" id="highCount">0</div>
+                        </div>
+                        <div class="bg-amber-950/25 border border-amber-500/30 rounded-2xl p-4 text-center">
+                            <div class="text-xs text-amber-400 font-bold uppercase tracking-wider">Moderate Risk</div>
+                            <div class="text-3xl sm:text-4xl font-black text-amber-400 mt-1.5" id="medCount">0</div>
+                        </div>
+                        <div class="bg-emerald-950/25 border border-emerald-500/30 rounded-2xl p-4 text-center">
+                            <div class="text-xs text-emerald-400 font-bold uppercase tracking-wider">Low / Safe</div>
+                            <div class="text-3xl sm:text-4xl font-black text-emerald-400 mt-1.5" id="lowCount">0</div>
+                        </div>
+                    </div>
+                    <div class="md:col-span-4 flex justify-center items-center h-36">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-4 sm:p-5">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Top Predicted Biological Interactions</h4>
+                    <div id="targetsList" class="space-y-2.5"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: VIRTUAL REACTION LAB -->
+        <div id="sectionLabReactor" class="hidden space-y-6">
+            <div class="ultra-glass glow-border-cyan rounded-2xl p-6 shadow-2xl">
+                <div class="flex items-center gap-2.5 mb-4 border-b border-slate-800 pb-3">
+                    <div class="w-8 h-8 rounded-xl bg-purple-950/70 border border-purple-500/40 flex items-center justify-center">
+                        <i class="fa-solid fa-vial-circle-check text-purple-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-100">Virtual Covalent Reaction Chamber</h3>
+                        <p class="text-xs text-slate-400 font-mono">Simulate multi-molecular collisions, transition-state activation, and covalent bond fusion.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Reactant A (SMILES Notation)</label>
+                        <input type="text" id="reactantA" value="CC(=O)O" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-4 py-3 font-mono text-sm focus:border-purple-400 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Reactant B (SMILES Notation)</label>
+                        <input type="text" id="reactantB" value="CCO" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-4 py-3 font-mono text-sm focus:border-purple-400 focus:outline-none transition">
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button onclick="setReactionPreset('CC(=O)O', 'CCO')" class="px-3.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium transition">Fischer Esterification (Acid + Alcohol)</button>
+                    <button onclick="setReactionPreset('O=C(O)c1ccccc1O', 'CC(=O)OC(=O)C')" class="px-3.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium transition">Aspirin Synthesis (O-Acylation)</button>
+                    <button onclick="setReactionPreset('CC(=O)O', 'Nc1ccccc1')" class="px-3.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium transition">Peptide Amide Coupling (Aniline)</button>
+                </div>
+
+                <button onclick="triggerCinematicFusion()" id="reactBtn" class="w-full py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black rounded-xl shadow-xl shadow-purple-500/25 transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-fire-burner"></i> MIX & SYNTHESIZE COVALENT REACTION
+                </button>
+            </div>
+
+            <div id="reactionResults" class="ultra-glass rounded-2xl p-6 shadow-2xl hidden space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-800 pb-3">
+                    <div>
+                        <span class="text-xs font-bold text-purple-400 uppercase tracking-widest font-mono" id="reactionTag">Synthesized Product</span>
+                        <h4 class="text-lg font-bold text-slate-100 font-mono mt-0.5" id="productSmilesText">-</h4>
+                    </div>
+                    <span class="text-xs font-mono px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-500/40 text-emerald-400 flex items-center gap-1.5 shadow-lg">
+                        <i class="fa-solid fa-link"></i> Covalent Bond Successfully Formed
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="mol-viewport relative" id="rxnViewport">
+                        <canvas id="reactionAnimCanvas"></canvas>
+                        <div id="rxnStatusBadge" class="absolute bottom-3 left-3 bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-800 text-[11px] font-mono text-cyan-300 z-30 shadow-lg">
+                            System Idle
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/80 p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+                        <div>
+                            <h5 class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <i class="fa-solid fa-microchip"></i> Gemini Reaction Mechanism & Byproducts
+                            </h5>
+                            <div id="rxnAiExplanation" class="text-xs text-slate-300 font-sans leading-relaxed prose prose-invert"></div>
+                        </div>
+                        <button onclick="sendToExplorer()" class="mt-4 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 rounded-xl text-xs font-bold text-white shadow-lg transition flex items-center justify-center gap-2">
+                            Send Product to 3D Explorer & GNN Screener <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: ATOM MODIFICATION SANDBOX -->
+        <div id="sectionAtomEditor" class="hidden space-y-6">
+            <div class="ultra-glass glow-border-cyan rounded-2xl p-6 shadow-2xl">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-rose-950/70 border border-rose-500/40 flex items-center justify-center">
+                            <i class="fa-solid fa-pen-ruler text-rose-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-100">Atomic Mutation & Elimination Sandbox</h3>
+                            <p class="text-xs text-slate-400 font-mono">Select any atom to mutate element type or eliminate it entirely.</p>
+                        </div>
+                    </div>
+                    <div class="text-right font-mono text-xs text-slate-400">
+                        Current Molecule: <span class="text-cyan-300 font-bold" id="sandboxSmilesLabel">-</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-5 bg-slate-950/80 p-4 rounded-xl border border-slate-800 h-[430px] flex flex-col">
+                        <span class="text-xs font-bold text-slate-400 uppercase mb-2">Select Atom to Modify</span>
+                        <div class="overflow-y-auto flex-1 space-y-1.5 pr-2" id="atomListContainer"></div>
+                    </div>
+
+                    <div class="lg:col-span-7 flex flex-col justify-between space-y-4">
+                        <div class="mol-viewport relative" id="editViewport">
+                            <div id="editLoader" class="absolute inset-0 flex items-center justify-center bg-slate-950/80 z-10 hidden">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-400"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 font-mono text-xs text-center">
+                            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                                <span class="text-slate-400 block text-[10px]">Formula</span>
+                                <span class="font-bold text-cyan-300" id="sandboxFormula">-</span>
+                            </div>
+                            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                                <span class="text-slate-400 block text-[10px]">Mol Weight</span>
+                                <span class="font-bold text-slate-200" id="sandboxMW">-</span>
+                            </div>
+                            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                                <span class="text-slate-400 block text-[10px]">LogP</span>
+                                <span class="font-bold text-purple-300" id="sandboxLogP">-</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button onclick="applyAtomAction('remove_atom')" class="flex-1 py-3 bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-trash-can"></i> Eliminate Selected Atom (<span id="selectedAtomDisplay">#0</span>)
+                            </button>
+                            <button onclick="applyAtomAction('replace_atom')" class="flex-1 py-3 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-arrow-rotate-left"></i> Mutate to Oxygen (O)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Periodic Table Modal -->
+    <div id="periodicModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-50 hidden flex flex-col items-center justify-center p-3 sm:p-6">
+        <div class="w-full max-w-6xl h-[90vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-950/80">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells text-amber-400"></i>
+                    <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider">Interactive Periodic Table Laboratory</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="/prio" target="_blank" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg font-mono text-cyan-300 border border-slate-700">Open in Full View <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></a>
+                    <button onclick="closePeriodicModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 flex items-center justify-center transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 bg-slate-950">
+                <iframe src="/prio" class="w-full h-full border-0" id="periodicIframe"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let viewer = null;
+        let rxnViewer = null;
+        let editViewer = null;
+        let isSpinning = false;
+        let currentMolBlock = "";
+        let currentProductSmiles = "";
+        let sandboxSmiles = "";
+        let selectedAtomIdx = 0;
+        let chartInstance = null;
+        let debounceTimer = null;
+        let activeSuggestionIndex = -1;
+
+        const smilesInput = document.getElementById("smilesInput");
+        const autocompleteDropdown = document.getElementById("autocompleteDropdown");
+        const autocompleteList = document.getElementById("autocompleteList");
+
+        window.addEventListener('DOMContentLoaded', () => {
+            viewer = $3Dmol.createViewer(document.getElementById("molViewport"), { backgroundColor: "#020617" });
+            initChart();
+            runInference();
+
+            smilesInput.addEventListener("input", () => {
+                clearTimeout(debounceTimer);
+                activeSuggestionIndex = -1;
+                const query = smilesInput.value.trim();
+                if(query.length < 1) {
+                    autocompleteDropdown.classList.add("hidden");
+                    return;
+                }
+                debounceTimer = setTimeout(() => fetchSuggestions(query), 150);
+            });
+
+            smilesInput.addEventListener("keydown", (e) => {
+                const items = autocompleteList.querySelectorAll(".suggest-row");
+                if(items.length === 0) return;
+                if(e.key === "ArrowDown") {
+                    e.preventDefault();
+                    activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
+                    highlightSuggestion(items);
+                } else if(e.key === "ArrowUp") {
+                    e.preventDefault();
+                    activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
+                    highlightSuggestion(items);
+                } else if(e.key === "Enter" && activeSuggestionIndex >= 0) {
+                    e.preventDefault();
+                    items[activeSuggestionIndex].click();
+                }
+            });
+
+            document.addEventListener("click", (e) => {
+                if(!smilesInput.contains(e.target) && !autocompleteDropdown.contains(e.target)) {
+                    autocompleteDropdown.classList.add("hidden");
+                }
+            });
+        });
+
+        function highlightSuggestion(items) {
+            items.forEach((item, idx) => {
+                item.className = (idx === activeSuggestionIndex) ? 
+                    "suggest-row p-3 bg-cyan-950/60 border-l-2 border-cyan-400 cursor-pointer flex items-center justify-between text-xs" : 
+                    "suggest-row p-3 hover:bg-cyan-950/40 cursor-pointer flex items-center justify-between text-xs";
+            });
+        }
+
+        function switchTab(tabId) {
+            ['sectionExplorer', 'sectionLabReactor', 'sectionAtomEditor'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            ['tabExplorer', 'tabReactor', 'tabEditor'].forEach(t => document.getElementById(t).className = "nav-tab px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-200 border border-transparent transition flex items-center gap-2");
+
+            if(tabId === 'explorer') {
+                document.getElementById('sectionExplorer').classList.remove('hidden');
+                document.getElementById('tabExplorer').className = "nav-tab active px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2";
+                if(viewer) viewer.resize();
+            } else if(tabId === 'labReactor') {
+                document.getElementById('sectionLabReactor').classList.remove('hidden');
+                document.getElementById('tabReactor').className = "nav-tab active px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2";
+                setTimeout(() => { if(rxnViewer) rxnViewer.resize(); }, 50);
+            } else if(tabId === 'atomEditor') {
+                document.getElementById('sectionAtomEditor').classList.remove('hidden');
+                document.getElementById('tabEditor').className = "nav-tab active px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2";
+                if(!editViewer) {
+                    editViewer = $3Dmol.createViewer(document.getElementById("editViewport"), { backgroundColor: "#020617" });
+                }
+                setTimeout(() => { if(editViewer) editViewer.resize(); }, 50);
+                sandboxSmiles = smilesInput.value.trim();
+                updateAtomSandbox(window.lastAtomTable || [], currentMolBlock);
+            }
+        }
+
+        function openPeriodicModal() {
+            document.getElementById("periodicModal").classList.remove("hidden");
+        }
+
+        function closePeriodicModal() {
+            document.getElementById("periodicModal").classList.add("hidden");
+        }
+
+        async function fetchSuggestions(query) {
+            try {
+                const res = await fetch("/api/autocomplete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query })
+                });
+                const data = await res.json();
+                if(data.results && data.results.length > 0) {
+                    autocompleteList.innerHTML = "";
+                    data.results.forEach(item => {
+                        const row = document.createElement("div");
+                        row.className = "suggest-row p-3 hover:bg-cyan-950/40 cursor-pointer flex items-center justify-between text-xs transition";
+                        row.innerHTML = `
+                            <div>
+                                <span class="font-bold text-slate-200">${item.name}</span>
+                                <span class="block text-[10px] text-slate-400 font-mono">${item.smiles}</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">${item.category}</span>
+                        `;
+                        row.onclick = () => {
+                            smilesInput.value = item.smiles;
+                            autocompleteDropdown.classList.add("hidden");
+                            runInference();
+                        };
+                        autocompleteList.appendChild(row);
+                    });
+                    autocompleteDropdown.classList.remove("hidden");
+                } else {
+                    autocompleteDropdown.classList.add("hidden");
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function clearSearch() { smilesInput.value = ""; autocompleteDropdown.classList.add("hidden"); }
+
+        function loadPreset(name) {
+            const map = {
+                Aspirin: "CC(=O)Oc1ccccc1C(=O)O",
+                Caffeine: "CN1C=NC2=C1C(=O)N(C(=O)N2C)C",
+                Ibuprofen: "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
+                Dopamine: "C1=CC(=C(C=C1CCN)O)O"
+            };
+            if(map[name]) {
+                smilesInput.value = map[name];
+                runInference();
+            }
+        }
+
+        function setStyle(styleType) {
+            if(!viewer || !currentMolBlock) return;
+            viewer.clear();
+            viewer.addModel(currentMolBlock, "mol");
+            ['btnStyleStick', 'btnStyleSphere', 'btnStyleWire'].forEach(id => {
+                document.getElementById(id).className = "px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-200";
+            });
+
+            if(styleType === 'stick') {
+                document.getElementById('btnStyleStick').className = "px-2.5 py-1 rounded-lg text-cyan-300 font-semibold bg-cyan-950/80 border border-cyan-500/30";
+                viewer.setStyle({}, { stick: { radius: 0.16, colorscheme: "Jmol" }, sphere: { scale: 0.28 } });
+            } else if(styleType === 'sphere') {
+                document.getElementById('btnStyleSphere').className = "px-2.5 py-1 rounded-lg text-cyan-300 font-semibold bg-cyan-950/80 border border-cyan-500/30";
+                viewer.setStyle({}, { sphere: { scale: 0.65, colorscheme: "Jmol" } });
+            } else if(styleType === 'wire') {
+                document.getElementById('btnStyleWire').className = "px-2.5 py-1 rounded-lg text-cyan-300 font-semibold bg-cyan-950/80 border border-cyan-500/30";
+                viewer.setStyle({}, { line: { linewidth: 2.2, colorscheme: "Jmol" } });
+            }
+            viewer.render();
+        }
+
+        function toggleSpin() {
+            if(!viewer) return;
+            isSpinning = !isSpinning;
+            viewer.spin(isSpinning ? "y" : false, 1.2);
+            document.getElementById("spinBtn").innerHTML = isSpinning ? `<i class="fa-solid fa-pause"></i> Pause` : `<i class="fa-solid fa-play"></i> Auto-Spin`;
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+                    datasets: [{
+                        data: [0, 0, 128],
+                        backgroundColor: ['#f43f5e', '#f59e0b', '#10b981'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '72%'
+                }
+            });
+        }
+
+        async function runInference() {
+            const smiles = smilesInput.value.trim();
+            const loader = document.getElementById("loader");
+            const btn = document.getElementById("analyzeBtn");
+            const aiContainer = document.getElementById("aiReportContainer");
+
+            if(!smiles) return alert("Please enter a valid SMILES chemical structure.");
+            loader.classList.remove("hidden");
+            btn.disabled = true;
+            aiContainer.innerHTML = `<span class="animate-pulse text-cyan-400 font-mono"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Gemini synthesizing pharmacological report...</span>`;
+
+            try {
+                const response = await fetch("/api/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ smiles })
+                });
+
+                if(!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || "Validation Error");
+                }
+
+                const data = await response.json();
+                currentMolBlock = data.mol_block;
+                sandboxSmiles = data.canonical_smiles;
+
+                viewer.clear();
+                viewer.addModel(currentMolBlock, "mol");
+                viewer.setStyle({}, { stick: { radius: 0.16, colorscheme: "Jmol" }, sphere: { scale: 0.28 } });
+                viewer.zoomTo();
+                viewer.render();
+
+                document.getElementById("svgContainer").innerHTML = data.svg_2d;
+
+                const props = data.properties || {};
+                document.getElementById("propFormula").innerText = props.formula || "-";
+                document.getElementById("propMW").innerText = props.mw || "-";
+                document.getElementById("propLogP").innerText = props.logp ?? "-";
+                document.getElementById("propTPSA").innerText = props.tpsa ?? "-";
+                document.getElementById("propHB").innerText = (props.hbd !== undefined && props.hba !== undefined) ? `${props.hbd} / ${props.hba}` : "-";
+
+                aiContainer.innerHTML = marked.parse(data.ai_report || "No summary available.");
+
+                const high = data.high_risk ?? 0;
+                const med = data.med_risk ?? 0;
+                const low = data.low_risk ?? 0;
+                document.getElementById("highCount").innerText = high;
+                document.getElementById("medCount").innerText = med;
+                document.getElementById("lowCount").innerText = low;
+                if(chartInstance) {
+                    chartInstance.data.datasets[0].data = [high, med, low];
+                    chartInstance.update();
+                }
+
+                const targetsList = document.getElementById("targetsList");
+                targetsList.innerHTML = "";
+                (data.top_targets || []).forEach(item => {
+                    const pct = (item.risk_score * 100).toFixed(1);
+                    const isHigh = item.risk_score >= 0.25;
+                    const isMed = item.risk_score >= 0.10 && item.risk_score < 0.25;
+                    const barColor = isHigh ? 'bg-gradient-to-r from-rose-500 to-red-500' : (isMed ? 'bg-gradient-to-r from-amber-400 to-yellow-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500');
+                    const badgeColor = isHigh ? 'text-rose-400 bg-rose-950/40 border-rose-800/40' : (isMed ? 'text-amber-400 bg-amber-950/40 border-amber-800/40' : 'text-emerald-400 bg-emerald-950/40 border-emerald-800/40');
+
+                    targetsList.innerHTML += `
+                        <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800/70">
+                            <div class="flex justify-between items-center text-xs mb-1">
+                                <span class="font-semibold text-slate-200 font-mono">${item.label}</span>
+                                <span class="px-2 py-0.5 rounded-md border font-mono font-bold text-[11px] ${badgeColor}">${pct}%</span>
+                            </div>
+                            <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                                <div class="${barColor} h-1.5 rounded-full" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                window.lastAtomTable = data.atom_table || [];
+
+            } catch (err) {
+                alert("Chemical Error: " + err.message);
+                aiContainer.innerHTML = `<span class="text-rose-400 font-mono">${err.message}</span>`;
+            } finally {
+                loader.classList.add("hidden");
+                btn.disabled = false;
+            }
+        }
+
+        // ================= KINETIC BOND FUSION ANIMATION ENGINE =================
+        async function triggerCinematicFusion() {
+            const reactant_a = document.getElementById("reactantA").value.trim();
+            const reactant_b = document.getElementById("reactantB").value.trim();
+            const btn = document.getElementById("reactBtn");
+            const badge = document.getElementById("rxnStatusBadge");
+            const canvas = document.getElementById("reactionAnimCanvas");
+            const resultsBox = document.getElementById("reactionResults");
+
+            if(!reactant_a || !reactant_b) return alert("Please specify both reactant structures.");
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-2"></i> Simulating Reaction...`;
+
+            try {
+                const response = await fetch("/api/lab/react", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reactant_a, reactant_b })
+                });
+
+                if(!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || "Reaction Failed");
+                }
+
+                const data = await response.json();
+                currentProductSmiles = data.product_smiles;
+
+                // 1. Unhide results section so dimensions are computed
+                resultsBox.classList.remove("hidden");
+                document.getElementById("reactionTag").innerText = data.reaction_name;
+                document.getElementById("productSmilesText").innerText = data.product_smiles;
+                document.getElementById("rxnAiExplanation").innerHTML = marked.parse(data.ai_explanation || "");
+
+                const rxnContainer = document.getElementById("rxnViewport");
+                
+                // 2. Initialize or resize the rxnViewer
+                if(!rxnViewer) {
+                    rxnViewer = $3Dmol.createViewer(rxnContainer, { backgroundColor: "#020617" });
+                }
+                rxnViewer.resize();
+
+                // 3. Fallback check on canvas width/height
+                const cWidth = rxnContainer.clientWidth > 0 ? rxnContainer.clientWidth : 500;
+                const cHeight = rxnContainer.clientHeight > 0 ? rxnContainer.clientHeight : 440;
+                canvas.width = cWidth;
+                canvas.height = cHeight;
+                canvas.style.display = "block";
+
+                const ctx = canvas.getContext("2d");
+                badge.innerText = "Phase 1: Reactant Kinetic Approach...";
+                rxnViewer.clear();
+
+                let progress = 0;
+                let particles = [];
+                for(let i = 0; i < 35; i++) {
+                    particles.push({
+                        x: Math.random() * cWidth,
+                        y: Math.random() * cHeight,
+                        vx: (Math.random() - 0.5) * 5,
+                        vy: (Math.random() - 0.5) * 5,
+                        radius: Math.random() * 3 + 1,
+                        color: Math.random() > 0.5 ? '#38bdf8' : '#a855f7'
+                    });
+                }
+
+                const animInterval = setInterval(() => {
+                    ctx.clearRect(0, 0, cWidth, cHeight);
+                    progress += 0.05;
+
+                    const leftX = (cWidth * 0.22) + (cWidth * 0.28 * progress);
+                    const rightX = (cWidth * 0.78) - (cWidth * 0.28 * progress);
+                    const centerY = cHeight * 0.5;
+
+                    ctx.beginPath();
+                    ctx.arc(leftX, centerY, 22, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(56, 189, 248, 0.8)";
+                    ctx.shadowColor = "#38bdf8";
+                    ctx.shadowBlur = 20;
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(rightX, centerY, 22, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(168, 85, 247, 0.8)";
+                    ctx.shadowColor = "#a855f7";
+                    ctx.shadowBlur = 20;
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(leftX, centerY);
+                    ctx.lineTo(rightX, centerY);
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${progress})`;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    particles.forEach(p => {
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = p.color;
+                        ctx.fill();
+                    });
+
+                    if(progress >= 1.0) {
+                        clearInterval(animInterval);
+                        triggerBondFormationFlash(data.mol_block);
+                    }
+                }, 30);
+
+                function triggerBondFormationFlash(productMolBlock) {
+                    badge.innerText = "Phase 2: Transition State & Covalent Bond Formation!";
+                    
+                    let flashAlpha = 1.0;
+                    const flashInterval = setInterval(() => {
+                        ctx.fillStyle = `rgba(56, 189, 248, ${flashAlpha})`;
+                        ctx.fillRect(0, 0, cWidth, cHeight);
+                        flashAlpha -= 0.18;
+                        if(flashAlpha <= 0) {
+                            clearInterval(flashInterval);
+                            ctx.clearRect(0, 0, cWidth, cHeight);
+                            canvas.style.display = "none";
+
+                            badge.innerText = "Phase 3: Ground State Minimized Product";
+                            
+                            // Render 3D molecule directly in rxnViewer
+                            rxnViewer.clear();
+                            rxnViewer.resize();
+                            rxnViewer.addModel(productMolBlock, "mol");
+                            rxnViewer.setStyle({}, { stick: { radius: 0.18, colorscheme: "Jmol" }, sphere: { scale: 0.32 } });
+                            rxnViewer.zoomTo();
+                            rxnViewer.spin("y", 1);
+                            rxnViewer.render();
+
+                            btn.disabled = false;
+                            btn.innerHTML = `<i class="fa-solid fa-fire-burner"></i> MIX & SYNTHESIZE COVALENT REACTION`;
+                        }
+                    }, 40);
+                }
+
+            } catch (err) {
+                alert("Reaction Error: " + err.message);
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-fire-burner"></i> MIX & SYNTHESIZE COVALENT REACTION`;
+            }
+        }
+
+        function setReactionPreset(a, b) {
+            document.getElementById("reactantA").value = a;
+            document.getElementById("reactantB").value = b;
+        }
+
+        function sendToExplorer() {
+            if(!currentProductSmiles) return;
+            smilesInput.value = currentProductSmiles;
+            switchTab('explorer');
+            runInference();
+        }
+
+        function updateAtomSandbox(atoms, molBlock, props = null) {
+            const atomListContainer = document.getElementById("atomListContainer");
+            atomListContainer.innerHTML = "";
+            document.getElementById("sandboxSmilesLabel").innerText = sandboxSmiles || "-";
+            
+            if(!atoms || atoms.length === 0) {
+                atomListContainer.innerHTML = `<span class="text-xs text-slate-500 italic">No atoms available in this structure.</span>`;
+                return;
+            }
+
+            atoms.forEach(atom => {
+                const item = document.createElement("div");
+                item.className = "p-2 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center text-xs cursor-pointer hover:border-cyan-500 transition";
+                item.id = `atomRow_${atom.index}`;
+                item.innerHTML = `<span>Atom <strong>#${atom.index}</strong> [${atom.element}]</span><span class="text-slate-500 font-mono">${atom.hybridization}</span>`;
+                item.onclick = () => {
+                    selectedAtomIdx = atom.index;
+                    document.querySelectorAll("#atomListContainer > div").forEach(d => d.className = "p-2 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center text-xs cursor-pointer hover:border-cyan-500 transition");
+                    item.className = "p-2 rounded-lg bg-rose-950/60 border border-rose-500 flex justify-between items-center text-xs cursor-pointer font-bold";
+                    document.getElementById("selectedAtomDisplay").innerText = `#${atom.index} (${atom.element})`;
+                };
+                atomListContainer.appendChild(item);
+            });
+
+            if(atoms.length > 0) {
+                selectedAtomIdx = atoms[0].index;
+                document.getElementById("selectedAtomDisplay").innerText = `#${atoms[0].index} (${atoms[0].element})`;
+            }
+
+            if(props) {
+                document.getElementById("sandboxFormula").innerText = props.formula || "-";
+                document.getElementById("sandboxMW").innerText = `${props.mw} g/mol`;
+                document.getElementById("sandboxLogP").innerText = props.logp ?? "-";
+            }
+
+            if(editViewer && molBlock) {
+                editViewer.clear();
+                editViewer.resize();
+                editViewer.addModel(molBlock, "mol");
+                editViewer.setStyle({}, { stick: { radius: 0.16, colorscheme: "Jmol" }, sphere: { scale: 0.28 } });
+                editViewer.zoomTo();
+                editViewer.render();
+            }
+        }
+
+        async function applyAtomAction(action) {
+            const editLoader = document.getElementById("editLoader");
+            editLoader.classList.remove("hidden");
+            try {
+                const response = await fetch("/api/lab/modify_atom", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        base_smiles: sandboxSmiles,
+                        action: action,
+                        atom_index: selectedAtomIdx,
+                        new_element: "O"
+                    })
+                });
+
+                if(!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || "Modification Failed");
+                }
+
+                const data = await response.json();
+                sandboxSmiles = data.modified_smiles;
+                smilesInput.value = data.modified_smiles;
+                updateAtomSandbox(data.atom_table, data.mol_block, data.properties);
+
+            } catch (err) {
+                alert("Atomic Modification Error: " + err.message);
+            } finally {
+                editLoader.classList.add("hidden");
+            }
+        }
+    </script>
+</body>
+</html>

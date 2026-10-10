@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Periodic Table of Elements — Interactive 3D Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #000000;
+      --bg-card: #0a0d14;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-bright: rgba(255, 255, 255, 0.22);
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      /* Reference image palette */
+      --alkali-metal: #193f85;
+      --alkaline-earth: #1b5f9b;
+      --transition-metal: #1b7389;
+      --lanthanide: #1b6f65;
+      --actinide: #257d4e;
+      --metal: #637e3d;
+      --metalloid: #a17b1b;
+      --nonmetal: #c96d34;
+      --halogen: #d75a43;
+      --noble-gas: #e092ae;
+      --noble-gas-text: #1d0711;
+      --placeholder-bg: #eceff4;
+      --placeholder-text: #0f172a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    header {
+      width: 100%;
+      max-width: 1600px;
+      padding: 10px 24px 6px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 10;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .brand-title {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .controls-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .search-box {
+      position: relative;
+    }
+
+    .search-box input {
+      background: #0f141f;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 12.5px;
+      padding: 7px 12px 7px 32px;
+      width: 240px;
+      outline: none;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .search-box input:focus {
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+      width: 280px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 13px;
+      height: 13px;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* Category legend pills */
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px 14px;
+      max-width: 1400px;
+      padding: 4px 16px 10px;
+    }
+
+    .legend-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 3px 8px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      background: transparent;
+      border: 1px solid transparent;
+    }
+
+    .legend-pill:hover,
+    .legend-pill.active {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-bright);
+    }
+
+    .legend-color-box {
+      width: 13px;
+      height: 9px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    .table-viewport {
+      width: 100%;
+      max-width: 1540px;
+      padding: 4px 16px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: auto;
+    }
+
+    .table-layout {
+      position: relative;
+      display: grid;
+      grid-template-columns: 20px repeat(18, minmax(46px, 1fr));
+      grid-template-rows: repeat(7, minmax(50px, 1fr)) 16px repeat(2, minmax(50px, 1fr)) 20px;
+      gap: 3.5px;
+      width: 100%;
+      min-width: 980px;
+      max-width: 1460px;
+    }
+
+    /* Embedded Centered Title in the table cutout (matching reference) */
+    .table-cutout-title {
+      grid-column: 4 / 13;
+      grid-row: 2 / 4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .table-cutout-title h2 {
+      font-size: clamp(20px, 2.2vw, 34px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      opacity: 0.95;
+    }
+
+    .table-cutout-title span {
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Period and Group Indices */
+    .axis-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      opacity: 0.7;
+    }
+
+    .period-header-tag {
+      grid-column: 1;
+      grid-row: 6;
+      writing-mode: vertical-lr;
+      transform: rotate(180deg);
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .group-header-tag {
+      grid-column: 2 / 3;
+      grid-row: 11;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .element-card {
+      border-radius: 3px;
+      padding: 3px 4px 2px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.4, 1), box-shadow 0.15s, opacity 0.2s, filter 0.15s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .element-card:hover {
+      transform: scale(1.18);
+      z-index: 25;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.85);
+      filter: brightness(1.18);
+    }
+
+    .element-card.is-active-target {
+      outline: 2px solid #ffffff;
+      outline-offset: 1px;
+      z-index: 20;
+    }
+
+    .element-card.dimmed {
+      opacity: 0.15;
+      filter: grayscale(80%) brightness(0.6);
+      pointer-events: none;
+    }
+
+    /* Top Row in Tile */
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+      opacity: 0.9;
+    }
+
+    .card-num {
+      font-weight: 700;
+    }
+
+    .card-mass {
+      font-size: 7px;
+      opacity: 0.85;
+      letter-spacing: -0.02em;
+    }
+
+    .card-symbol {
+      font-size: clamp(14px, 1.4vw, 19px);
+      font-weight: 700;
+      text-align: center;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      margin: 1px 0;
+    }
+
+    .card-name {
+      font-size: clamp(6.5px, 0.65vw, 8.5px);
+      font-weight: 500;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.95;
+    }
+
+    .card-config {
+      font-size: clamp(5.5px, 0.55vw, 7px);
+      font-family: 'JetBrains Mono', monospace;
+      text-align: center;
+      opacity: 0.65;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1;
+      margin-top: 1px;
+    }
+
+    /* Distinct Categorical Classes */
+    .alkali-metal     { background-color: var(--alkali-metal); color: #ffffff; }
+    .alkaline-earth   { background-color: var(--alkaline-earth); color: #ffffff; }
+    .transition-metal { background-color: var(--transition-metal); color: #ffffff; }
+    .lanthanide       { background-color: var(--lanthanide); color: #ffffff; }
+    .actinide         { background-color: var(--actinide); color: #ffffff; }
+    .metal            { background-color: var(--metal); color: #ffffff; }
+    .metalloid        { background-color: var(--metalloid); color: #ffffff; }
+    .nonmetal         { background-color: var(--nonmetal); color: #ffffff; }
+    .halogen          { background-color: var(--halogen); color: #ffffff; }
+    .noble-gas        { background-color: var(--noble-gas); color: var(--noble-gas-text); }
+
+    /* Lanthanoid & Actinoid placeholder cards */
+    .placeholder-card {
+      background-color: var(--placeholder-bg);
+      color: var(--placeholder-text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      font-size: 8px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.25;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    .placeholder-card span:first-child {
+      font-size: 8.5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .quick-tooltip {
+      position: fixed;
+      pointer-events: none;
+      background: rgba(12, 16, 24, 0.94);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      padding: 9px 13px;
+      font-size: 11px;
+      color: #fff;
+      z-index: 100;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(6px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+      min-width: 170px;
+    }
+
+    .quick-tooltip.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .tt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tt-sym {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .tt-num {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .tt-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .tt-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .tt-row span:last-child {
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      perspective: 1200px;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .flip-viewport {
+      width: 100%;
+      max-width: 720px;
+      height: 520px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.65s cubic-bezier(0.2, 0.85, 0.35, 1.2);
+    }
+
+    .flip-viewport.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    .flip-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      backface-visibility: hidden;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    /* Front Face */
+    .flip-front {
+      background: linear-gradient(145deg, #11151f 0%, #090c13 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 36px 40px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .flip-close-btn {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.15s ease;
+      z-index: 10;
+    }
+
+    .flip-close-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.08);
+    }
+
+    .front-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .front-category-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #ffffff;
+    }
+
+    .front-atomic-number {
+      font-size: 34px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      opacity: 0.8;
+    }
+
+    .front-center {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 30px;
+      margin: 10px 0;
+    }
+
+    .front-identity {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .front-symbol {
+      font-size: 92px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 0.95;
+    }
+
+    .front-name {
+      font-size: 30px;
+      font-weight: 700;
+      margin-top: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .front-mass {
+      font-size: 15px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Live Bohr Atomic Orbit Graphic */
+    .bohr-visualizer {
+      width: 170px;
+      height: 170px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bohr-nucleus {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffffff 10%, #60a5fa 90%);
+      box-shadow: 0 0 16px rgba(96, 165, 250, 0.8);
+      z-index: 5;
+    }
+
+    .bohr-ring {
+      position: absolute;
+      border: 1px dashed rgba(255, 255, 255, 0.25);
+      border-radius: 50%;
+      animation: spinOrbit 14s linear infinite;
+    }
+
+    .bohr-ring:nth-child(2) { width: 56px; height: 56px; animation-duration: 6s; }
+    .bohr-ring:nth-child(3) { width: 92px; height: 92px; animation-duration: 10s; animation-direction: reverse; }
+    .bohr-ring:nth-child(4) { width: 128px; height: 128px; animation-duration: 15s; }
+    .bohr-ring:nth-child(5) { width: 164px; height: 164px; animation-duration: 20s; animation-direction: reverse; }
+
+    @keyframes spinOrbit {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .front-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 18px;
+    }
+
+    .front-shells-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .flip-cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .flip-cta-btn:hover {
+      background: #ffffff;
+      color: #000000;
+      transform: translateY(-1px);
+    }
+
+    /* Back Face */
+    .flip-back {
+      background: #0d111a;
+      transform: rotateY(180deg);
+      display: flex;
+      flex-direction: column;
+      padding: 28px 34px;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .back-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+    }
+
+    .back-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .back-summary {
+      font-size: 13px;
+      line-height: 1.55;
+      color: #cbd5e1;
+      margin-bottom: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 10px 14px;
+      border-radius: 8px;
+      border-left: 3px solid #38bdf8;
+    }
+
+    .data-grid-layout {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .prop-item {
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 9px 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .prop-name {
+      font-size: 9.5px;
+      color: var(--text-dim);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .prop-val {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .full-row-box {
+      grid-column: span 3;
+    }
+
+    .back-footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: auto;
+      padding-top: 10px;
+    }
+
+    .return-btn {
+      background: transparent;
+      border: 1px solid var(--border-bright);
+      color: var(--text-muted);
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .return-btn:hover {
+      color: #fff;
+      border-color: #fff;
+    }
+
+    @media (max-width: 900px) {
+      header {
+        padding: 8px 14px 4px;
+      }
+      .brand-title {
+        font-size: 16px;
+      }
+      .search-box input {
+        width: 170px;
+      }
+      .legend-bar {
+        gap: 4px 10px;
+      }
+      .legend-pill {
+        font-size: 10px;
+      }
+      .flip-viewport {
+        height: 560px;
+      }
+      .data-grid-layout {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .full-row-box {
+        grid-column: span 2;
+      }
+      .front-center {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .bohr-visualizer {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navigation -->
+  <header>
+    <div class="brand-wrap">
+      <h1 class="brand-title">Periodic Table Pro</h1>
+      <span class="brand-subtitle">Interactive Chemical Atlas</span>
+    </div>
+
+    <div class="controls-wrap">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="elementSearch" placeholder="Search atom, symbol, or #..." autocomplete="off" />
+      </div>
+    </div>
+  </header>
+
+  <!-- Interactive Category Legend Filter -->
+  <div class="legend-bar" id="legendFilterBar">
+    <button class="legend-pill active" data-cat="all">All Elements</button>
+    <button class="legend-pill" data-cat="alkali-metal"><span class="legend-color-box" style="background:var(--alkali-metal)"></span>Alkali Metal</button>
+    <button class="legend-pill" data-cat="alkaline-earth"><span class="legend-color-box" style="background:var(--alkaline-earth)"></span>Alkaline Earth</button>
+    <button class="legend-pill" data-cat="transition-metal"><span class="legend-color-box" style="background:var(--transition-metal)"></span>Transition Metal</button>
+    <button class="legend-pill" data-cat="lanthanide"><span class="legend-color-box" style="background:var(--lanthanide)"></span>Lanthanide</button>
+    <button class="legend-pill" data-cat="actinide"><span class="legend-color-box" style="background:var(--actinide)"></span>Actinide</button>
+    <button class="legend-pill" data-cat="metal"><span class="legend-color-box" style="background:var(--metal)"></span>Metal</button>
+    <button class="legend-pill" data-cat="metalloid"><span class="legend-color-box" style="background:var(--metalloid)"></span>Metalloid</button>
+    <button class="legend-pill" data-cat="nonmetal"><span class="legend-color-box" style="background:var(--nonmetal)"></span>Nonmetal</button>
+    <button class="legend-pill" data-cat="halogen"><span class="legend-color-box" style="background:var(--halogen)"></span>Halogen</button>
+    <button class="legend-pill" data-cat="noble-gas"><span class="legend-color-box" style="background:var(--noble-gas)"></span>Noble Gas</button>
+  </div>
+
+  <!-- Entire Fit-To-Screen Grid Container -->
+  <main class="table-viewport">
+    <div class="table-layout" id="periodicGridLayout">
+      
+      <!-- Center Title Cutout from Reference Artwork -->
+      <div class="table-cutout-title">
+        <h2>Periodic Table of Elements</h2>
+        <span>118 Atomic Entities</span>
+      </div>
+
+      <!-- Period Labels 1-7 (Column 1) -->
+      <div class="axis-label" style="grid-column: 1; grid-row: 1;">1</div>
+      <div class="axis-label" style="grid-column: 1; grid-row: 2;">2</div>
+      <div class="axis-label" style="grid-column: 1; grid-row: 3;">3</div>
+      <div class="axis-label" style="grid-column: 1; grid-row: 4;">4</div>
+      <div class="axis-label" style="grid-column: 1; grid-row: 5;">5</div>
+      <div class="axis-label" style="grid-column: 1; grid-row: 6;">6</div>
+      <div class="axis-label" style="grid-column: 1; grid-row: 7;">7</div>
+      <div class="period-header-tag">Period</div>
+
+      <!-- Group Labels 1-18 (Row 11) -->
+      <div class="axis-label" style="grid-column: 2; grid-row: 11;">1</div>
+      <div class="axis-label" style="grid-column: 3; grid-row: 11;">2</div>
+      <div class="axis-label" style="grid-column: 4; grid-row: 11;">3</div>
+      <div class="axis-label" style="grid-column: 5; grid-row: 11;">4</div>
+      <div class="axis-label" style="grid-column: 6; grid-row: 11;">5</div>
+      <div class="axis-label" style="grid-column: 7; grid-row: 11;">6</div>
+      <div class="axis-label" style="grid-column: 8; grid-row: 11;">7</div>
+      <div class="axis-label" style="grid-column: 9; grid-row: 11;">8</div>
+      <div class="axis-label" style="grid-column: 10; grid-row: 11;">9</div>
+      <div class="axis-label" style="grid-column: 11; grid-row: 11;">10</div>
+      <div class="axis-label" style="grid-column: 12; grid-row: 11;">11</div>
+      <div class="axis-label" style="grid-column: 13; grid-row: 11;">12</div>
+      <div class="axis-label" style="grid-column: 14; grid-row: 11;">13</div>
+      <div class="axis-label" style="grid-column: 15; grid-row: 11;">14</div>
+      <div class="axis-label" style="grid-column: 16; grid-row: 11;">15</div>
+      <div class="axis-label" style="grid-column: 17; grid-row: 11;">16</div>
+      <div class="axis-label" style="grid-column: 18; grid-row: 11;">17</div>
+      <div class="axis-label" style="grid-column: 19; grid-row: 11;">18</div>
+
+      <!-- Lanthanoid & Actinoid Gap Placeholders -->
+      <div class="placeholder-card" style="grid-column: 4; grid-row: 6;">
+        <span>57–71</span>
+        <span>Lanthanoids</span>
+      </div>
+      <div class="placeholder-card" style="grid-column: 4; grid-row: 7;">
+        <span>89–103</span>
+        <span>Actinoids</span>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Lightweight Quick Hover Tooltip -->
+  <div class="quick-tooltip" id="quickTooltip">
+    <div class="tt-header">
+      <span class="tt-sym" id="ttSymbol">H</span>
+      <span class="tt-num" id="ttNumber">#1</span>
+    </div>
+    <div class="tt-title" id="ttName">Hydrogen</div>
+    <div class="tt-row"><span>Weight:</span><span id="ttWeight">1.008 u</span></div>
+    <div class="tt-row"><span>Category:</span><span id="ttCategory">Nonmetal</span></div>
+    <div class="tt-row"><span>Config:</span><span id="ttConfig">1s¹</span></div>
+  </div>
+
+  <!-- 3D Card Flip Modal Dialog -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="flip-viewport" id="flipViewport">
+      
+      <!-- FRONT SIDE OF FLIP CARD -->
+      <div class="flip-face flip-front" id="flipFrontFace">
+        <button class="flip-close-btn" id="modalCloseBtn" title="Close (Esc)">&times;</button>
+        
+        <div class="front-top-bar">
+          <span class="front-category-badge" id="modalFrontCatBadge">Nonmetal</span>
+          <span class="front-atomic-number" id="modalFrontNum">1</span>
+        </div>
+
+        <div class="front-center">
+          <div class="front-identity">
+            <span class="front-symbol" id="modalFrontSym">H</span>
+            <span class="front-name" id="modalFrontName">Hydrogen</span>
+            <span class="front-mass" id="modalFrontMass">1.008 u</span>
+          </div>
+
+          <div class="bohr-visualizer">
+            <div class="bohr-nucleus"></div>
+            <div class="bohr-ring"></div>
+            <div class="bohr-ring"></div>
+            <div class="bohr-ring"></div>
+            <div class="bohr-ring"></div>
+          </div>
+        </div>
+
+        <div class="front-bottom">
+          <div class="front-shells-desc" id="modalFrontShells">K: 1</div>
+          <button class="flip-cta-btn" id="triggerFlipBtn">
+            <span>Flip For Full Details</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- BACK SIDE OF FLIP CARD (DEEP SCIENTIFIC DATA) -->
+      <div class="flip-face flip-back" id="flipBackFace">
+        <div class="back-header">
+          <div>
+            <div class="back-title" id="modalBackTitle">Hydrogen (H)</div>
+            <span style="font-size: 11px; color: var(--text-muted);" id="modalBackCategory">Reactive Nonmetal</span>
+          </div>
+          <button class="flip-close-btn" id="modalBackCloseBtn">&times;</button>
+        </div>
+
+        <p class="back-summary" id="modalBackDesc">
+          Lightest and most abundant chemical substance in the universe, constituting roughly 75% of all baryonic mass.
+        </p>
+
+        <div class="data-grid-layout">
+          <div class="prop-item">
+            <span class="prop-name">Standard State</span>
+            <span class="prop-val" id="dPhase">Gas</span>
+          </div>
+          <div class="prop-item">
+            <span class="prop-name">Electronegativity</span>
+            <span class="prop-val" id="dElectro">2.20</span>
+          </div>
+          <div class="prop-item">
+            <span class="prop-name">Density</span>
+            <span class="prop-val" id="dDensity">0.08988 g/L</span>
+          </div>
+          <div class="prop-item">
+            <span class="prop-name">Melting Point</span>
+            <span class="prop-val" id="dMelt">13.99 K</span>
+          </div>
+          <div class="prop-item">
+            <span class="prop-name">Boiling Point</span>
+            <span class="prop-val" id="dBoil">20.27 K</span>
+          </div>
+          <div class="prop-item">
+            <span class="prop-name">Oxidation States</span>
+            <span class="prop-val" id="dOxidation">+1, -1</span>
+          </div>
+          <div class="prop-item full-row-box">
+            <span class="prop-name">Electron Configuration</span>
+            <span class="prop-val" id="dConfig" style="letter-spacing: 0.03em;">1s¹</span>
+          </div>
+          <div class="prop-item full-row-box">
+            <span class="prop-name">Discovery & Year</span>
+            <span class="prop-val" id="dDiscoverer">H. Cavendish (1766)</span>
+          </div>
+          <div class="prop-item full-row-box">
+            <span class="prop-name">Key Applications & Uses</span>
+            <span class="prop-val" id="dUses">Ammonia synthesis, fuel cells, petroleum hydrocracking, rocket propulsion propellant.</span>
+          </div>
+        </div>
+
+        <div class="back-footer-actions">
+          <button class="return-btn" id="flipReturnBtn">Flip Back</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* Complete Database with rich scientific and historical properties */
+    const elementsData = [
+      { n: 1, s: "H", name: "Hydrogen", mass: "1.008", cat: "nonmetal", r: 1, c: 2, cfg: "1s¹", phase: "Gas", en: "2.20", melt: "13.99 K (-259.16 °C)", boil: "20.27 K (-252.88 °C)", dens: "0.08988 g/L", disc: "H. Cavendish (1766)", ox: "+1, -1", shells: "1", desc: "The lightest and most abundant chemical substance in the universe, constituting roughly 75% of all cosmic baryonic mass.", uses: "Clean rocket fuel, ammonia synthesis (Haber-Bosch), fuel cells, and oil hydrotreating." },
+      { n: 2, s: "He", name: "Helium", mass: "4.003", cat: "noble-gas", r: 1, c: 19, cfg: "1s²", phase: "Gas", en: "—", melt: "0.95 K (-272.2 °C)", boil: "4.22 K (-268.93 °C)", dens: "0.1786 g/L", disc: "P. Janssen, N. Lockyer (1868)", ox: "0", shells: "2", desc: "Colorless, odorless, inert monatomic gas that tops the noble gas series.", uses: "Cooling superconducting MRI magnets, deep-sea diving trimix, and blimps." },
+      { n: 3, s: "Li", name: "Lithium", mass: "6.941", cat: "alkali-metal", r: 2, c: 2, cfg: "[He] 2s¹", phase: "Solid", en: "0.98", melt: "453.69 K (180.54 °C)", boil: "1603 K (1330 °C)", dens: "0.534 g/cm³", disc: "J.A. Arfvedson (1817)", ox: "+1", shells: "2, 1", desc: "Soft, silvery-white alkali metal; the least dense solid pure element.", uses: "Rechargeable lithium-ion battery cells, psychiatric medications, and specialized grease." },
+      { n: 4, s: "Be", name: "Beryllium", mass: "9.012", cat: "alkaline-earth", r: 2, c: 3, cfg: "[He] 2s²", phase: "Solid", en: "1.57", melt: "1560 K (1287 °C)", boil: "2742 K (2469 °C)", dens: "1.85 g/cm³", disc: "L.N. Vauquelin (1798)", ox: "+2", shells: "2, 2", desc: "Relatively rare metal in the universe, formed mostly through cosmic ray spallation.", uses: "James Webb Space Telescope primary mirror segments and aerospace structural alloys." },
+      { n: 5, s: "B", name: "Boron", mass: "10.811", cat: "metalloid", r: 2, c: 14, cfg: "[He] 2s² 2p¹", phase: "Solid", en: "2.04", melt: "2349 K (2076 °C)", boil: "4200 K (3927 °C)", dens: "2.34 g/cm³", disc: "J.L. Gay-Lussac, L.J. Thénard (1808)", ox: "+3", shells: "2, 3", desc: "Low-abundance metalloid common in mineral borax and tourmaline deposits.", uses: "Borosilicate Pyrex thermal glassware, fiberglass, and neutron absorbers." },
+      { n: 6, s: "C", name: "Carbon", mass: "12.011", cat: "nonmetal", r: 2, c: 15, cfg: "[He] 2s² 2p²", phase: "Solid", en: "2.55", melt: "Sublimes 3915 K", boil: "4198 K (3925 °C)", dens: "2.267 g/cm³", disc: "Prehistoric", ox: "+4, +2, -4", shells: "2, 4", desc: "The chemical backbone of all organic chemistry and life on Earth.", uses: "Steel manufacturing, carbon-fiber composites, graphitic batteries, and diamond optics." },
+      { n: 7, s: "N", name: "Nitrogen", mass: "14.007", cat: "nonmetal", r: 2, c: 16, cfg: "[He] 2s² 2p³", phase: "Gas", en: "3.04", melt: "63.15 K (-210.00 °C)", boil: "77.36 K (-195.79 °C)", dens: "1.251 g/L", disc: "D. Rutherford (1772)", ox: "-3, +3, +5", shells: "2, 5", desc: "Constitutes roughly 78% of Earth's atmosphere.", uses: "Agricultural synthetic fertilizers, cryogenic food preservation, and inert tank blanketing." },
+      { n: 8, s: "O", name: "Oxygen", mass: "15.999", cat: "nonmetal", r: 2, c: 17, cfg: "[He] 2s² 2p⁴", phase: "Gas", en: "3.44", melt: "54.36 K (-218.79 °C)", boil: "90.20 K (-182.95 °C)", dens: "1.429 g/L", disc: "C.W. Scheele, J. Priestley (1774)", ox: "-2", shells: "2, 6", desc: "Highly reactive oxidizing agent supporting aerobic cellular respiration.", uses: "Hospital medical respiration, steelmaking blast furnaces, and rocket oxidizers." },
+      { n: 9, s: "F", name: "Fluorine", mass: "18.998", cat: "halogen", r: 2, c: 18, cfg: "[He] 2s² 2p⁵", phase: "Gas", en: "3.98", melt: "53.53 K (-219.62 °C)", boil: "85.03 K (-188.12 °C)", dens: "1.696 g/L", disc: "H. Moissan (1886)", ox: "-1", shells: "2, 7", desc: "The most electronegative element, reacting with almost all other elements.", uses: "Teflon (PTFE) cookware non-stick coatings, dental fluoridation, and uranium enrichment." },
+      { n: 10, s: "Ne", name: "Neon", mass: "20.180", cat: "noble-gas", r: 2, c: 19, cfg: "[He] 2s² 2p⁶", phase: "Gas", en: "—", melt: "24.56 K (-248.59 °C)", boil: "27.07 K (-246.08 °C)", dens: "0.9002 g/L", disc: "W. Ramsay, M. Travers (1898)", ox: "0", shells: "2, 8", desc: "Gives a distinct intense reddish-orange glow in high-voltage discharge tubes.", uses: "High-voltage neon luminous signs, laser optics (HeNe lasers), and cryogenics." },
+      { n: 11, s: "Na", name: "Sodium", mass: "22.990", cat: "alkali-metal", r: 3, c: 2, cfg: "[Ne] 3s¹", phase: "Solid", en: "0.93", melt: "370.87 K (97.72 °C)", boil: "1156 K (883 °C)", dens: "0.968 g/cm³", disc: "H. Davy (1807)", ox: "+1", shells: "2, 8, 1", desc: "Soft, highly reactive alkali metal essential for cellular nerve impulses.", uses: "Table salt (NaCl), fast-neutron reactor liquid metal coolants, and street lamps." },
+      { n: 12, s: "Mg", name: "Magnesium", mass: "24.305", cat: "alkaline-earth", r: 3, c: 3, cfg: "[Ne] 3s²", phase: "Solid", en: "1.31", melt: "923 K (650 °C)", boil: "1363 K (1090 °C)", dens: "1.738 g/cm³", disc: "J. Black (1755)", ox: "+2", shells: "2, 8, 2", desc: "Lightweight structural metal and the coordinate center ion in chlorophyll.", uses: "Automotive magnesium-aluminum castings, flare pyrotechnics, and electronic housings." },
+      { n: 13, s: "Al", name: "Aluminum", mass: "26.982", cat: "metal", r: 3, c: 14, cfg: "[Ne] 3s² 3p¹", phase: "Solid", en: "1.61", melt: "933.47 K (660.32 °C)", boil: "2792 K (2519 °C)", dens: "2.70 g/cm³", disc: "H.C. Ørsted (1825)", ox: "+3", shells: "2, 8, 3", desc: "The most abundant metallic element in Earth's continental crust.", uses: "Aircraft airframe construction, high-voltage transmission lines, and cans." },
+      { n: 14, s: "Si", name: "Silicon", mass: "28.086", cat: "metalloid", r: 3, c: 15, cfg: "[Ne] 3s² 3p²", phase: "Solid", en: "1.90", melt: "1687 K (1414 °C)", boil: "3538 K (3265 °C)", dens: "2.329 g/cm³", disc: "J.J. Berzelius (1824)", ox: "+4, -4", shells: "2, 8, 4", desc: "Primary semiconductor substrate material powering modern microprocessors.", uses: "Integrated silicon microchips, solar photovoltaics, and silicone polymers." },
+      { n: 15, s: "P", name: "Phosphorus", mass: "30.974", cat: "nonmetal", r: 3, c: 16, cfg: "[Ne] 3s² 3p³", phase: "Solid", en: "2.19", melt: "317.3 K (44.15 °C)", boil: "550 K (277 °C)", dens: "1.823 g/cm³", disc: "H. Brand (1669)", ox: "+5, +3, -3", shells: "2, 8, 5", desc: "Essential element for the structural backbones of DNA, RNA, and ATP.", uses: "Agricultural NPK fertilizers, safety matches, and lithium iron phosphate (LFP) batteries." },
+      { n: 16, s: "S", name: "Sulfur", mass: "32.065", cat: "nonmetal", r: 3, c: 17, cfg: "[Ne] 3s² 3p⁴", phase: "Solid", en: "2.58", melt: "388.36 K (115.21 °C)", boil: "717.8 K (444.6 °C)", dens: "2.07 g/cm³", disc: "Prehistoric", ox: "+6, +4, -2", shells: "2, 8, 6", desc: "Bright yellow crystalline solid used primarily to synthesize sulfuric acid.", uses: "Sulfuric acid production, vulcanization of rubber tires, and fungicides." },
+      { n: 17, s: "Cl", name: "Chlorine", mass: "35.453", cat: "halogen", r: 3, c: 18, cfg: "[Ne] 3s² 3p⁵", phase: "Gas", en: "3.16", melt: "171.6 K (-101.5 °C)", boil: "239.11 K (-34.04 °C)", dens: "3.2 g/L", disc: "C.W. Scheele (1774)", ox: "-1, +1, +3, +5, +7", shells: "2, 8, 7", desc: "Yellow-green gas widely used as a municipal drinking water disinfectant.", uses: "Polyvinyl chloride (PVC) plastics, municipal sanitation, and pharmaceuticals." },
+      { n: 18, s: "Ar", name: "Argon", mass: "39.948", cat: "noble-gas", r: 3, c: 19, cfg: "[Ne] 3s² 3p⁶", phase: "Gas", en: "—", melt: "83.80 K (-189.35 °C)", boil: "87.30 K (-185.85 °C)", dens: "1.784 g/L", disc: "Lord Rayleigh, W. Ramsay (1894)", ox: "0", shells: "2, 8, 8", desc: "Third most abundant atmospheric gas (~0.93%), completely unreactive.", uses: "Inert shielding gas for TIG welding, incandescent bulbs, and double-pane windows." },
+      { n: 19, s: "K", name: "Potassium", mass: "39.098", cat: "alkali-metal", r: 4, c: 2, cfg: "[Ar] 4s¹", phase: "Solid", en: "0.82", melt: "336.53 K (63.38 °C)", boil: "1032 K (759 °C)", dens: "0.862 g/cm³", disc: "H. Davy (1807)", ox: "+1", shells: "2, 8, 8, 1", desc: "Silvery alkali metal vital for heart contractions and cell membrane potential.", uses: "Potash crop fertilizers, specialty soaps, and laboratory chemical synthesis." },
+      { n: 20, s: "Ca", name: "Calcium", mass: "40.078", cat: "alkaline-earth", r: 4, c: 3, cfg: "[Ar] 4s²", phase: "Solid", en: "1.00", melt: "1115 K (842 °C)", boil: "1757 K (1484 °C)", dens: "1.54 g/cm³", disc: "H. Davy (1808)", ox: "+2", shells: "2, 8, 8, 2", desc: "Fifth most abundant element by mass in Earth's crust and key for bone structure.", uses: "Portland cement, plaster, metallurgical steel deoxidizers, and dietary supplements." },
+      { n: 21, s: "Sc", name: "Scandium", mass: "44.956", cat: "transition-metal", r: 4, c: 4, cfg: "[Ar] 3d¹ 4s²", phase: "Solid", en: "1.36", melt: "1814 K (1541 °C)", boil: "3109 K (2836 °C)", dens: "2.985 g/cm³", disc: "L.F. Nilson (1879)", ox: "+3", shells: "2, 8, 9, 2", desc: "Lightweight rare-earth transition metal that substantially strengthens aluminum.", uses: "MIG 29 fighter jet airframes, baseball bats, and metal halide studio lighting." },
+      { n: 22, s: "Ti", name: "Titanium", mass: "47.867", cat: "transition-metal", r: 4, c: 5, cfg: "[Ar] 3d² 4s²", phase: "Solid", en: "1.54", melt: "1941 K (1668 °C)", boil: "3560 K (3287 °C)", dens: "4.506 g/cm³", disc: "W. Gregor (1791)", ox: "+4, +3", shells: "2, 8, 10, 2", desc: "Renowned for its high strength-to-weight ratio and corrosion resistance.", uses: "Jet engine compressor blades, orthopedic joint implants, and TiO2 white paint pigment." },
+      { n: 23, s: "V", name: "Vanadium", mass: "50.942", cat: "transition-metal", r: 4, c: 6, cfg: "[Ar] 3d³ 4s²", phase: "Solid", en: "1.63", melt: "2183 K (1910 °C)", boil: "3680 K (3407 °C)", dens: "6.11 g/cm³", disc: "A.M. del Río (1801)", ox: "+5, +4, +3, +2", shells: "2, 8, 11, 2", desc: "Hard, ductile metal used principally in steel reinforcement alloys.", uses: "High-speed tool steels, superconducting magnets, and grid-scale redox flow batteries." },
+      { n: 24, s: "Cr", name: "Chromium", mass: "51.996", cat: "transition-metal", r: 4, c: 7, cfg: "[Ar] 3d⁵ 4s¹", phase: "Solid", en: "1.66", melt: "2180 K (1907 °C)", boil: "2944 K (2671 °C)", dens: "7.15 g/cm³", disc: "L.N. Vauquelin (1797)", ox: "+3, +6", shells: "2, 8, 13, 1", desc: "Imparts stainless characteristics and high luster to chrome-plated metals.", uses: "Stainless steel manufacturing, chrome electroplating, and nichrome heating elements." },
+      { n: 25, s: "Mn", name: "Manganese", mass: "54.938", cat: "transition-metal", r: 4, c: 8, cfg: "[Ar] 3d⁵ 4s²", phase: "Solid", en: "1.55", melt: "1519 K (1246 °C)", boil: "2334 K (2061 °C)", dens: "7.21 g/cm³", disc: "J.G. Gahn (1774)", ox: "+2, +4, +7", shells: "2, 8, 13, 2", desc: "Crucial cofactor in the biological photosynthetic water-splitting complex.", uses: "Deoxidizing agent in steelmaking, alkaline batteries, and EV battery cathodes." },
+      { n: 26, s: "Fe", name: "Iron", mass: "55.845", cat: "transition-metal", r: 4, c: 9, cfg: "[Ar] 3d⁶ 4s²", phase: "Solid", en: "1.83", melt: "1811 K (1538 °C)", boil: "3134 K (2862 °C)", dens: "7.874 g/cm³", disc: "Prehistoric", ox: "+2, +3", shells: "2, 8, 14, 2", desc: "Most abundant element on Earth by mass; forms much of outer and inner core.", uses: "Structural engineering steel, cast iron engines, and hemoglobin oxygen carriers." },
+      { n: 27, s: "Co", name: "Cobalt", mass: "58.933", cat: "transition-metal", r: 4, c: 10, cfg: "[Ar] 3d⁷ 4s²", phase: "Solid", en: "1.88", melt: "1768 K (1495 °C)", boil: "3200 K (2927 °C)", dens: "8.90 g/cm³", disc: "G. Brandt (1735)", ox: "+2, +3", shells: "2, 8, 15, 2", desc: "Ferromagnetic metal critical in lithium-ion energy storage chemistries.", uses: "NMC lithium-ion batteries, superalloys for jet engines, and cobalt blue stained glass." },
+      { n: 28, s: "Ni", name: "Nickel", mass: "58.693", cat: "transition-metal", r: 4, c: 11, cfg: "[Ar] 3d⁸ 4s²", phase: "Solid", en: "1.91", melt: "1728 K (1455 °C)", boil: "3186 K (2913 °C)", dens: "8.908 g/cm³", disc: "A.F. Cronstedt (1751)", ox: "+2", shells: "2, 8, 16, 2", desc: "Corrosion-resistant element essential in stainless steel and coinage.", uses: "Stainless steel production, electroplating, and electric vehicle batteries." },
+      { n: 29, s: "Cu", name: "Copper", mass: "63.546", cat: "transition-metal", r: 4, c: 12, cfg: "[Ar] 3d¹⁰ 4s¹", phase: "Solid", en: "1.90", melt: "1357.77 K (1084.62 °C)", boil: "2835 K (2562 °C)", dens: "8.96 g/cm³", disc: "Prehistoric", ox: "+2, +1", shells: "2, 8, 18, 1", desc: "Top-tier electrical and thermal conductor with natural antimicrobial action.", uses: "Electrical grid power wiring, PCB traces, water plumbing, and brass/bronze alloys." },
+      { n: 30, s: "Zn", name: "Zinc", mass: "65.380", cat: "transition-metal", r: 4, c: 13, cfg: "[Ar] 3d¹⁰ 4s²", phase: "Solid", en: "1.65", melt: "692.68 K (419.53 °C)", boil: "1180 K (907 °C)", dens: "7.14 g/cm³", disc: "Indian Metallurgists (<1000 BCE)", ox: "+2", shells: "2, 8, 18, 2", desc: "Widely used to hot-dip galvanize steel structures against rust.", uses: "Galvanized steel protection, brass alloy casting, and sunscreens (ZnO)." },
+      { n: 31, s: "Ga", name: "Gallium", mass: "69.723", cat: "metal", r: 4, c: 14, cfg: "[Ar] 3d¹⁰ 4s² 4p¹", phase: "Solid", en: "1.81", melt: "302.91 K (29.76 °C)", boil: "2673 K (2400 °C)", dens: "5.91 g/cm³", disc: "L. de Boisbaudran (1875)", ox: "+3", shells: "2, 8, 18, 3", desc: "Melts in human hands (29.8 °C); fundamental in high-frequency optoelectronics.", uses: "Gallium nitride (GaN) fast chargers, blue laser diodes, and GaAs semiconductors." },
+      { n: 32, s: "Ge", name: "Germanium", mass: "72.640", cat: "metalloid", r: 4, c: 15, cfg: "[Ar] 3d¹⁰ 4s² 4p²", phase: "Solid", en: "2.01", melt: "1211.40 K (938.25 °C)", boil: "3106 K (2833 °C)", dens: "5.323 g/cm³", disc: "C. Winkler (1886)", ox: "+4", shells: "2, 8, 18, 4", desc: "First transistor semiconductor material before silicon became dominant.", uses: "Fiber optic telecommunication cores, infrared night-vision optics, and solar cells." },
+      { n: 33, s: "As", name: "Arsenic", mass: "74.922", cat: "metalloid", r: 4, c: 16, cfg: "[Ar] 3d¹⁰ 4s² 4p³", phase: "Solid", en: "2.18", melt: "1090 K (817 °C, subl)", boil: "887 K (614 °C)", dens: "5.727 g/cm³", disc: "Albertus Magnus (1250)", ox: "+3, +5, -3", shells: "2, 8, 18, 5", desc: "Notorious metalloid historic poison; acts as an n-type semiconductor dopant.", uses: "Gallium arsenide (GaAs) RF smartphone chips and wood preservation." },
+      { n: 34, s: "Se", name: "Selenium", mass: "78.960", cat: "nonmetal", r: 4, c: 17, cfg: "[Ar] 3d¹⁰ 4s² 4p⁴", phase: "Solid", en: "2.55", melt: "494 K (221 °C)", boil: "958 K (685 °C)", dens: "4.81 g/cm³", disc: "J.J. Berzelius (1817)", ox: "+4, +6, -2", shells: "2, 8, 18, 6", desc: "Exhibits photovoltaic and photoconductive electrical conductivity.", uses: "Photocopier drums, tinting glass ruby-red, and dietary antioxidant enzymes." },
+      { n: 35, s: "Br", name: "Bromine", mass: "79.904", cat: "halogen", r: 4, c: 18, cfg: "[Ar] 3d¹⁰ 4s² 4p⁵", phase: "Liquid", en: "2.96", melt: "265.8 K (-7.35 °C)", boil: "332.0 K (58.8 °C)", dens: "3.1028 g/cm³", disc: "A.J. Balard (1826)", ox: "-1, +1, +3, +5", shells: "2, 8, 18, 7", desc: "Fuming deep red-brown liquid halogen; one of only two liquid elements at STP.", uses: "Brominated flame retardants, photographic emulsions, and deep oil drilling fluids." },
+      { n: 36, s: "Kr", name: "Krypton", mass: "83.798", cat: "noble-gas", r: 4, c: 19, cfg: "[Ar] 3d¹⁰ 4s² 4p⁶", phase: "Gas", en: "3.00", melt: "115.79 K (-157.36 °C)", boil: "119.93 K (-153.22 °C)", dens: "3.749 g/L", disc: "W. Ramsay, M. Travers (1898)", ox: "0, +2", shells: "2, 8, 18, 8", desc: "Historically defined the official length of the international meter from 1960 to 1983.", uses: "Insulated glass window fills, airport runway strobes, and excimer lasers." },
+      { n: 37, s: "Rb", name: "Rubidium", mass: "85.468", cat: "alkali-metal", r: 5, c: 2, cfg: "[Kr] 5s¹", phase: "Solid", en: "0.82", melt: "312.46 K (39.31 °C)", boil: "961 K (688 °C)", dens: "1.532 g/cm³", disc: "R. Bunsen, G. Kirchhoff (1861)", ox: "+1", shells: "2, 8, 18, 8, 1", desc: "Highly reactive alkali metal that spontaneously combusts in room-temperature air.", uses: "High-precision rubidium atomic clocks for GPS and Bose-Einstein condensation." },
+      { n: 38, s: "Sr", name: "Strontium", mass: "87.620", cat: "alkaline-earth", r: 5, c: 3, cfg: "[Kr] 5s²", phase: "Solid", en: "0.95", melt: "1050 K (777 °C)", boil: "1655 K (1382 °C)", dens: "2.64 g/cm³", disc: "A. Crawford (1790)", ox: "+2", shells: "2, 8, 18, 8, 2", desc: "Gives fireworks their characteristic intense crimson scarlet red flame colors.", uses: "Crimson pyrotechnics, ferrite ceramic magnets, and optical lattice atomic clocks." },
+      { n: 39, s: "Y", name: "Yttrium", mass: "88.906", cat: "transition-metal", r: 5, c: 4, cfg: "[Kr] 4d¹ 5s²", phase: "Solid", en: "1.22", melt: "1799 K (1526 °C)", boil: "3609 K (3336 °C)", dens: "4.472 g/cm³", disc: "J. Gadolin (1794)", ox: "+3", shells: "2, 8, 18, 9, 2", desc: "Pivotal component in YBCO high-temperature superconductors.", uses: "YAG lasers, red display phosphors, and thermal barrier coatings on turbine blades." },
+      { n: 40, s: "Zr", name: "Zirconium", mass: "91.224", cat: "transition-metal", r: 5, c: 5, cfg: "[Kr] 4d² 5s²", phase: "Solid", en: "1.33", melt: "2128 K (1855 °C)", boil: "4682 K (4409 °C)", dens: "6.52 g/cm³", disc: "M.H. Klaproth (1789)", ox: "+4", shells: "2, 8, 18, 10, 2", desc: "Extremely low thermal neutron absorption cross-section; clads nuclear fuel rods.", uses: "Nuclear reactor fuel rod cladding, cubic zirconia faux gemstones, and dental crowns." },
+      { n: 41, s: "Nb", name: "Niobium", mass: "92.906", cat: "transition-metal", r: 5, c: 6, cfg: "[Kr] 4d⁴ 5s¹", phase: "Solid", en: "1.60", melt: "2750 K (2477 °C)", boil: "5017 K (4744 °C)", dens: "8.57 g/cm³", disc: "C. Hatchett (1801)", ox: "+5, +3", shells: "2, 8, 18, 12, 1", desc: "Type-II superconductor utilized in particle accelerators and MRI field magnets.", uses: "Superconducting MRI coils, oil pipelines, and rocket exhaust nozzles." },
+      { n: 42, s: "Mo", name: "Molybdenum", mass: "95.960", cat: "transition-metal", r: 5, c: 7, cfg: "[Kr] 4d⁵ 5s¹", phase: "Solid", en: "2.16", melt: "2896 K (2623 °C)", boil: "4912 K (4639 °C)", dens: "10.28 g/cm³", disc: "C.W. Scheele (1778)", ox: "+6", shells: "2, 8, 18, 13, 1", desc: "Maintains high strength at temperatures exceeding 1000 °C in heavy steels.", uses: "Moly-steel armor plating, high-temperature lubricants (MoS2), and enzymes." },
+      { n: 43, s: "Tc", name: "Technetium", mass: "98.000", cat: "transition-metal", r: 5, c: 8, cfg: "[Kr] 4d⁵ 5s²", phase: "Solid", en: "1.90", melt: "2430 K (2157 °C)", boil: "4538 K (4265 °C)", dens: "11.0 g/cm³", disc: "E. Segrè, C. Perrier (1937)", ox: "+7, +4", shells: "2, 8, 18, 13, 2", desc: "The lightest element without any stable isotopes; generated synthetically.", uses: "Tc-99m radioactive medical imaging scans (SPECT) for bone and organ imaging." },
+      { n: 44, s: "Ru", name: "Ruthenium", mass: "101.07", cat: "transition-metal", r: 5, c: 9, cfg: "[Kr] 4d⁷ 5s¹", phase: "Solid", en: "2.20", melt: "2607 K (2334 °C)", boil: "4423 K (4150 °C)", dens: "12.45 g/cm³", disc: "K.K. Klaus (1844)", ox: "+3, +4, +8", shells: "2, 8, 18, 15, 1", desc: "Platinum-group metal used to coat hard disks and wear-resistant electrical switchgear.", uses: "Hard disk drive read heads, solar cell dye sensitizers, and chlorine production anodes." },
+      { n: 45, s: "Rh", name: "Rhodium", mass: "102.91", cat: "transition-metal", r: 5, c: 10, cfg: "[Kr] 4d⁸ 5s¹", phase: "Solid", en: "2.28", melt: "2237 K (1964 °C)", boil: "3968 K (3695 °C)", dens: "12.41 g/cm³", disc: "W.H. Wollaston (1804)", ox: "+3", shells: "2, 8, 18, 16, 1", desc: "Corrosion-resistant noble metal; extraordinarily potent automotive NOx catalyst.", uses: "Three-way automotive catalytic converters, white gold plating, and chemical catalysts." },
+      { n: 46, s: "Pd", name: "Palladium", mass: "106.42", cat: "transition-metal", r: 5, c: 11, cfg: "[Kr] 4d¹⁰", phase: "Solid", en: "2.20", melt: "1828.05 K (1554.9 °C)", boil: "3236 K (2963 °C)", dens: "12.023 g/cm³", disc: "W.H. Wollaston (1802)", ox: "+2, +4", shells: "2, 8, 18, 18", desc: "Can absorb up to 900 times its own volume in hydrogen gas at room temperature.", uses: "Multilayer ceramic capacitors, catalytic converters, and hydrogen purification filters." },
+      { n: 47, s: "Ag", name: "Silver", mass: "107.87", cat: "transition-metal", r: 5, c: 12, cfg: "[Kr] 4d¹⁰ 5s¹", phase: "Solid", en: "1.93", melt: "1234.93 K (961.78 °C)", boil: "2435 K (2162 °C)", dens: "10.49 g/cm³", disc: "Prehistoric", ox: "+1", shells: "2, 8, 18, 18, 1", desc: "Possesses the highest electrical and thermal conductivity of all known elements.", uses: "Solar photovoltaic contact fingers, high-reliability electrical solder, and mirrors." },
+      { n: 48, s: "Cd", name: "Cadmium", mass: "112.41", cat: "transition-metal", r: 5, c: 13, cfg: "[Kr] 4d¹⁰ 5s²", phase: "Solid", en: "1.69", melt: "594.22 K (321.07 °C)", boil: "1040 K (767 °C)", dens: "8.65 g/cm³", disc: "K.S.L. Hermann, F. Stromeyer (1817)", ox: "+2", shells: "2, 8, 18, 18, 2", desc: "Heavy metal formerly common in rechargeable NiCad batteries.", uses: "CdTe thin-film solar panels, electroplating corrosion barriers, and reactor rods." },
+      { n: 49, s: "In", name: "Indium", mass: "114.82", cat: "metal", r: 5, c: 14, cfg: "[Kr] 4d¹⁰ 5s² 5p¹", phase: "Solid", en: "1.78", melt: "429.75 K (156.60 °C)", boil: "2345 K (2072 °C)", dens: "7.31 g/cm³", disc: "F. Reich, H.T. Richter (1863)", ox: "+3", shells: "2, 8, 18, 18, 3", desc: "Key element in transparent conductive ITO films used on smartphones.", uses: "Indium tin oxide (ITO) touchscreens, cold vacuum seals, and low-melting alloys." },
+      { n: 50, s: "Sn", name: "Tin", mass: "118.71", cat: "metal", r: 5, c: 15, cfg: "[Kr] 4d¹⁰ 5s² 5p²", phase: "Solid", en: "1.96", melt: "505.08 K (231.93 °C)", boil: "2875 K (2602 °C)", dens: "7.265 g/cm³", disc: "Prehistoric", ox: "+4, +2", shells: "2, 8, 18, 18, 4", desc: "Alloyed with copper since antiquity to produce bronze; subject to tin pest allotropy.", uses: "Lead-free electronics solder, food preservation tin cans, and float glass baths." },
+      { n: 51, s: "Sb", name: "Antimony", mass: "121.76", cat: "metalloid", r: 5, c: 16, cfg: "[Kr] 4d¹⁰ 5s² 5p³", phase: "Solid", en: "2.05", melt: "903.78 K (630.63 °C)", boil: "1860 K (1587 °C)", dens: "6.697 g/cm³", disc: "Prehistoric", ox: "+3, +5, -3", shells: "2, 8, 18, 18, 5", desc: "Expands upon solidifying; famously used in printing typefaces and cosmetics.", uses: "Halogen flame retardant synergists, lead-acid battery plates, and infrared sensors." },
+      { n: 52, s: "Te", name: "Tellurium", mass: "127.60", cat: "metalloid", r: 5, c: 17, cfg: "[Kr] 4d¹⁰ 5s² 5p⁴", phase: "Solid", en: "2.10", melt: "722.66 K (449.51 °C)", boil: "1261 K (988 °C)", dens: "6.24 g/cm³", disc: "F.J. Müller von Reichenstein (1782)", ox: "+4, -2, +6", shells: "2, 8, 18, 18, 6", desc: "Extremely rare in Earth's crust; frequently paired with gold in nature.", uses: "Thermoelectric cooling modules (Bi2Te3), CD/DVD phase-change layers, and solar cells." },
+      { n: 53, s: "I", name: "Iodine", mass: "126.90", cat: "halogen", r: 5, c: 18, cfg: "[Kr] 4d¹⁰ 5s² 5p⁵", phase: "Solid", en: "2.66", melt: "386.85 K (113.7 °C)", boil: "457.4 K (184.3 °C)", dens: "4.933 g/cm³", disc: "B. Courtois (1811)", ox: "-1, +1, +5, +7", shells: "2, 8, 18, 18, 7", desc: "Lustrous purple-black solid that sublimes into dense violet vapors.", uses: "Thyroid hormone biosynthesis, medical antiseptic betadine, and X-ray contrast fluids." },
+      { n: 54, s: "Xe", name: "Xenon", mass: "131.29", cat: "noble-gas", r: 5, c: 19, cfg: "[Kr] 4d¹⁰ 5s² 5p⁶", phase: "Gas", en: "2.60", melt: "161.40 K (-111.75 °C)", boil: "165.03 K (-108.12 °C)", dens: "5.894 g/L", disc: "W. Ramsay, M. Travers (1898)", ox: "0, +2, +4, +6", shells: "2, 8, 18, 18, 8", desc: "Heavy noble gas used as reaction mass propellant in satellite ion thrusters.", uses: "Spacecraft Hall effect ion thrusters, movie theater projector bulbs, and general anesthesia." },
+      { n: 55, s: "Cs", name: "Cesium", mass: "132.91", cat: "alkali-metal", r: 6, c: 2, cfg: "[Xe] 6s¹", phase: "Solid", en: "0.79", melt: "301.59 K (28.44 °C)", boil: "944 K (671 °C)", dens: "1.93 g/cm³", disc: "R. Bunsen, G. Kirchhoff (1860)", ox: "+1", shells: "2, 8, 18, 18, 8, 1", desc: "Defines the exact international SI second via its 9,192,631,770 Hz atomic oscillation.", uses: "Primary international atomic clocks, oil well drilling formate fluids, and magnetometers." },
+      { n: 56, s: "Ba", name: "Barium", mass: "137.33", cat: "alkaline-earth", r: 6, c: 3, cfg: "[Xe] 6s²", phase: "Solid", en: "0.89", melt: "1000 K (727 °C)", boil: "2170 K (1897 °C)", dens: "3.51 g/cm³", disc: "C.W. Scheele (1772)", ox: "+2", shells: "2, 8, 18, 18, 8, 2", desc: "Dense element used medically as a radiopaque gastrointestinal contrast agent.", uses: "Medical barium meals for gastrointestinal X-rays, oil drilling muds, and green fireworks." },
+      { n: 72, s: "Hf", name: "Hafnium", mass: "178.49", cat: "transition-metal", r: 6, c: 5, cfg: "[Xe] 4f¹⁴ 5d² 6s²", phase: "Solid", en: "1.30", melt: "2506 K (2233 °C)", boil: "4876 K (4603 °C)", dens: "13.31 g/cm³", disc: "D. Coster, G. de Hevesy (1923)", ox: "+4", shells: "2, 8, 18, 32, 10, 2", desc: "High-k dielectric oxide component that enabled microprocessor scaling below 45nm.", uses: "Microchip transistor gate dielectrics, nuclear submarine reactor control rods, and plasma torches." },
+      { n: 73, s: "Ta", name: "Tantalum", mass: "180.95", cat: "transition-metal", r: 6, c: 6, cfg: "[Xe] 4f¹⁴ 5d³ 6s²", phase: "Solid", en: "1.50", melt: "3290 K (3017 °C)", boil: "5731 K (5458 °C)", dens: "16.69 g/cm³", disc: "A.G. Ekeberg (1802)", ox: "+5", shells: "2, 8, 18, 32, 11, 2", desc: "Extremely corrosion-resistant metal used to construct ultra-compact capacitors.", uses: "Miniature smartphone surface-mount capacitors, chemical plant valves, and bone implants." },
+      { n: 74, s: "W", name: "Wolfram", mass: "183.84", cat: "transition-metal", r: 6, c: 7, cfg: "[Xe] 4f¹⁴ 5d⁴ 6s²", phase: "Solid", en: "2.36", melt: "3695 K (3422 °C)", boil: "6203 K (5930 °C)", dens: "19.25 g/cm³", disc: "J. & F. Elhuyar (1783)", ox: "+6", shells: "2, 8, 18, 32, 12, 2", desc: "Has the highest melting point of all known metals (3422 °C / 6192 °F).", uses: "Tungsten carbide cutting tools, rocket engine nozzles, and TIG welding electrodes." },
+      { n: 75, s: "Re", name: "Rhenium", mass: "186.21", cat: "transition-metal", r: 6, c: 8, cfg: "[Xe] 4f¹⁴ 5d⁵ 6s²", phase: "Solid", en: "1.90", melt: "3459 K (3186 °C)", boil: "5869 K (5596 °C)", dens: "21.02 g/cm³", disc: "W. Noddack, I. Tacke-Noddack (1925)", ox: "+7, +4", shells: "2, 8, 18, 32, 13, 2", desc: "Critical additive in jet engine nickel-based single-crystal turbine blades.", uses: "Jet turbine high-pressure blades and lead-free high-octane gasoline reform catalysts." },
+      { n: 76, s: "Os", name: "Osmium", mass: "190.23", cat: "transition-metal", r: 6, c: 9, cfg: "[Xe] 4f¹⁴ 5d⁶ 6s²", phase: "Solid", en: "2.20", melt: "3306 K (3033 °C)", boil: "5285 K (5012 °C)", dens: "22.59 g/cm³", disc: "S. Tennant (1803)", ox: "+4, +8", shells: "2, 8, 18, 32, 14, 2", desc: "The densest naturally occurring stable chemical element on Earth.", uses: "Ultra-durable electrical contacts, fountain pen nib tips, and fingerprint staining." },
+      { n: 77, s: "Ir", name: "Iridium", mass: "192.22", cat: "transition-metal", r: 6, c: 10, cfg: "[Xe] 4f¹⁴ 5d⁷ 6s²", phase: "Solid", en: "2.20", melt: "2719 K (2446 °C)", boil: "4701 K (4428 °C)", dens: "22.56 g/cm³", disc: "S. Tennant (1803)", ox: "+4, +3", shells: "2, 8, 18, 32, 15, 2", desc: "Most corrosion-resistant metal known; enriched in the Cretaceous dinosaur asteroid layer.", uses: "Crucibles for single-crystal laser growth, aviation spark plugs, and OLED displays." },
+      { n: 78, s: "Pt", name: "Platinum", mass: "195.08", cat: "transition-metal", r: 6, c: 11, cfg: "[Xe] 4f¹⁴ 5d⁹ 6s¹", phase: "Solid", en: "2.28", melt: "2041.4 K (1768.3 °C)", boil: "4098 K (3825 °C)", dens: "21.45 g/cm³", disc: "A. de Ulloa (1735)", ox: "+4, +2", shells: "2, 8, 18, 32, 17, 1", desc: "Precious noble metal essential for catalytic cracking and hydrogen electrodes.", uses: "Diesel catalytic converters, cancer chemotherapy drugs (cisplatin), and jewelry." },
+      { n: 79, s: "Au", name: "Gold", mass: "196.97", cat: "transition-metal", r: 6, c: 12, cfg: "[Xe] 4f¹⁴ 5d¹⁰ 6s¹", phase: "Solid", en: "2.54", melt: "1337.33 K (1064.18 °C)", boil: "3129 K (2856 °C)", dens: "19.30 g/cm³", disc: "Prehistoric", ox: "+3, +1", shells: "2, 8, 18, 32, 18, 1", desc: "Malleable noble metal unreactive with air due to relativistic quantum effects.", uses: "Corrosion-free electrical connector plating, central bank gold reserves, and space visors." },
+      { n: 80, s: "Hg", name: "Mercury", mass: "200.59", cat: "transition-metal", r: 6, c: 13, cfg: "[Xe] 4f¹⁴ 5d¹⁰ 6s²", phase: "Liquid", en: "2.00", melt: "234.32 K (-38.83 °C)", boil: "629.88 K (356.73 °C)", dens: "13.534 g/cm³", disc: "Prehistoric", ox: "+2, +1", shells: "2, 8, 18, 32, 18, 2", desc: "Only metallic element in liquid physical phase under standard atmospheric conditions.", uses: "Fluorescent lamps, gold amalgamation mining, and historic barometers." },
+      { n: 81, s: "Tl", name: "Thallium", mass: "204.38", cat: "metal", r: 6, c: 14, cfg: "[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p¹", phase: "Solid", en: "1.62", melt: "577 K (304 °C)", boil: "1746 K (1473 °C)", dens: "11.85 g/cm³", disc: "W. Crookes (1861)", ox: "+1, +3", shells: "2, 8, 18, 32, 18, 3", desc: "Extremely toxic heavy metal once widely used historically as rodenticide.", uses: "Medical myocardial perfusion scintigraphy stress testing and specialty optical lenses." },
+      { n: 82, s: "Pb", name: "Lead", mass: "207.2", cat: "metal", r: 6, c: 15, cfg: "[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p²", phase: "Solid", en: "2.33", melt: "600.61 K (327.46 °C)", boil: "2022 K (1749 °C)", dens: "11.34 g/cm³", disc: "Prehistoric", ox: "+2, +4", shells: "2, 8, 18, 32, 18, 4", desc: "Dense, malleable radiation shielding metal; terminal decay endpoint of uranium.", uses: "Vehicle 12V lead-acid starter batteries and medical X-ray radiation shielding blankets." },
+      { n: 83, s: "Bi", name: "Bismuth", mass: "208.98", cat: "metal", r: 6, c: 16, cfg: "[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p³", phase: "Solid", en: "2.02", melt: "544.7 K (271.5 °C)", boil: "1837 K (1564 °C)", dens: "9.78 g/cm³", disc: "Prehistoric", ox: "+3", shells: "2, 8, 18, 32, 18, 5", desc: "Exhibits strong diamagnetism and colorful iridescent rainbow oxide hopper crystals.", uses: "Pepto-Bismol stomach soothing medication, low-melting fire sprinkler plugs, and cosmetics." },
+      { n: 84, s: "Po", name: "Polonium", mass: "209", cat: "metalloid", r: 6, c: 17, cfg: "[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁴", phase: "Solid", en: "2.00", melt: "527 K (254 °C)", boil: "1235 K (962 °C)", dens: "9.196 g/cm³", disc: "M. & P. Curie (1898)", ox: "+4, +2", shells: "2, 8, 18, 32, 18, 6", desc: "Intensely radioactive pure alpha emitter discovered in uraninite pitchblende.", uses: "Industrial anti-static brushes and thermoelectric generators on early Soviet lunar rovers." },
+      { n: 85, s: "At", name: "Astatine", mass: "210", cat: "halogen", r: 6, c: 18, cfg: "[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁵", phase: "Solid", en: "2.20", melt: "575 K (302 °C)", boil: "610 K (337 °C)", dens: "6.35 g/cm³", disc: "D.R. Corson et al. (1940)", ox: "-1, +1, +5", shells: "2, 8, 18, 32, 18, 7", desc: "Rarest naturally occurring chemical element in Earth's crust (less than 1 gram total).", uses: "Targeted alpha therapy (TAT) experimental cancer radiotherapy radionuclides." },
+      { n: 86, s: "Rn", name: "Radon", mass: "222", cat: "noble-gas", r: 6, c: 19, cfg: "[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁶", phase: "Gas", en: "—", melt: "202 K (-71 °C)", boil: "211.3 K (-61.7 °C)", dens: "9.73 g/L", disc: "F.E. Dorn (1900)", ox: "0, +2", shells: "2, 8, 18, 32, 18, 8", desc: "Radioactive noble gas from natural decay of radium that collects in subterranean basements.", uses: "Hydrologic tracking of groundwater movement and historic radiation seed implants." },
+      { n: 87, s: "Fr", name: "Francium", mass: "223", cat: "alkali-metal", r: 7, c: 2, cfg: "[Rn] 7s¹", phase: "Solid", en: "0.70", melt: "300 K (27 °C)", boil: "950 K (677 °C)", dens: "1.87 g/cm³", disc: "M. Perey (1939)", ox: "+1", shells: "2, 8, 18, 32, 18, 8, 1", desc: "Last natural element discovered; extremely unstable with an 22-minute half-life.", uses: "Fundamental spectroscopy research into atomic parity violation and quantum traps." },
+      { n: 88, s: "Ra", name: "Radium", mass: "226", cat: "alkaline-earth", r: 7, c: 3, cfg: "[Rn] 7s²", phase: "Solid", en: "0.90", melt: "973 K (700 °C)", boil: "2010 K (1737 °C)", dens: "5.5 g/cm³", disc: "M. & P. Curie (1898)", ox: "+2", shells: "2, 8, 18, 32, 18, 8, 2", desc: "Famed luminescent radioactive element once applied to glow-in-the-dark watch dials.", uses: "Radium-223 alpha radiotherapy for metastatic prostate bone cancer treatment." },
+      { n: 104, s: "Rf", name: "Rutherfordium", mass: "261", cat: "transition-metal", r: 7, c: 5, cfg: "[Rn] 5f¹⁴ 6d² 7s²", phase: "Synthetic", en: "—", melt: "2400 K", boil: "5800 K", dens: "23.2 g/cm³", disc: "JINR / LBNL (1969)", ox: "+4", shells: "2, 8, 18, 32, 32, 10, 2", desc: "First superheavy transactinide element synthesized via heavy-ion cyclotrons.", uses: "Scientific research into relativistic transactinide valence electron chemistry." },
+      { n: 105, s: "Db", name: "Dubnium", mass: "262", cat: "transition-metal", r: 7, c: 6, cfg: "[Rn] 5f¹⁴ 6d³ 7s²", phase: "Synthetic", en: "—", melt: "—", boil: "—", dens: "29.3 g/cm³", disc: "JINR / LBNL (1970)", ox: "+5", shells: "2, 8, 18, 32, 32, 11, 2", desc: "Named after the Russian Joint Institute for Nuclear Research in Dubna.", uses: "Exclusively academic heavy-ion nuclear chemistry investigations." },
+      { n: 106, s: "Sg", name: "Seaborgium", mass: "266", cat: "transition-metal", r: 7, c: 7, cfg: "[Rn] 5f¹⁴ 6d⁴ 7s²", phase: "Synthetic", en: "—", melt: "—", boil: "—", dens: "35.0 g/cm³", disc: "LBNL (1974)", ox: "+6", shells: "2, 8, 18, 32, 32, 12, 2", desc: "Synthesized at Berkeley and named in honor of Nobel laureate Glenn T. Seaborg.", uses: "Gas-phase thermochromatography investigations of group 6 chemical homologs." },
+      { n: 107, s: "Bh", name: "Bohrium", mass: "264", cat: "transition-metal", r: 7, c: 8, cfg: "[Rn] 5f¹⁴ 6d⁵ 7s²", phase: "Synthetic", en: "—", melt: "—", boil: "—", dens: "37.1 g/cm³", disc: "GSI Darmstadt (1981)", ox: "+7", shells: "2, 8, 18, 32, 32, 13, 2", desc: "Synthetic transactinide element named after quantum physicist Niels Bohr.", uses: "Confirmation of relativistic group 7 oxychloride chemical complexes." },
+      { n: 108, s: "Hs", name: "Hassium", mass: "267", cat: "transition-metal", r: 7, c: 9, cfg: "[Rn] 5f¹⁴ 6d⁶ 7s²", phase: "Synthetic", en: "—", melt: "—", boil: "—", dens: "40.7 g/cm³", disc: "GSI Darmstadt (1984)", ox: "+8", shells: "2, 8, 18, 32, 32, 14, 2", desc: "Forms volatile tetroxide compound analogous to its lighter homolog osmium.", uses: "Pure scientific nuclear research into superheavy volatility." },
+      { n: 109, s: "Mt", name: "Meitnerium", mass: "268", cat: "transition-metal", r: 7, c: 10, cfg: "[Rn] 5f¹⁴ 6d⁷ 7s²", phase: "Synthetic", en: "—", melt: "—", boil: "—", dens: "37.4 g/cm³", disc: "GSI Darmstadt (1982)", ox: "+9, +3", shells: "2, 8, 18, 32, 32, 15, 2", desc: "Honors Austrian physicist Lise Meitner, co-discoverer of nuclear fission.", uses: "Studies on nuclear fission barrier heights in superheavy nuclei." },
+      { n: 110, s: "Ds", name: "Darmstadtium", mass: "271", cat: "transition-metal", r: 7, c: 11, cfg: "[Rn] 5f¹⁴ 6d⁸ 7s²", phase: "Synthetic", en: "—", melt: "—", boil: "—", dens: "34.8 g/cm³", disc: "GSI Darmstadt (1994)", ox: "+8, +6", shells: "2, 8, 18, 32, 32, 16, 2", desc: "Synthesized via fusion of lead-208 targets with accelerated nickel-62 ions.", uses: "Academic research into cold fusion synthesis reactions." },
+      { n: 111, s: "Rg", name: "Roentgenium", mass: "272", cat: "transition-metal", r: 7, c: 12, cfg: "[Rn] 5f¹⁴ 6d⁹ 7s²", phase: "Synthetic", en: "—", melt: "—", boil: "—", dens: "28.7 g/cm³", disc: "GSI Darmstadt (1994)", ox: "+3, +5", shells: "2, 8, 18, 32, 32, 17, 2", desc: "Named in honor of physicist Wilhelm Röntgen, discoverer of X-rays.", uses: "Basic research into relativistic effects on group 11 coin metal structures." },
+      { n: 112, s: "Cn", name: "Copernicium", mass: "285", cat: "transition-metal", r: 7, c: 13, cfg: "[Rn] 5f¹⁴ 6d¹⁰ 7s²", phase: "Synthetic", en: "—", melt: "283 K (10 °C)", boil: "340 K (67 °C)", dens: "23.7 g/cm³", disc: "GSI Darmstadt (1996)", ox: "+2", shells: "2, 8, 18, 32, 32, 18, 2", desc: "Shows relativistic volatile metal traits resembling a pseudo-noble gas.", uses: "Investigation of closed-shell metallic bonding configurations." },
+      { n: 113, s: "Nh", name: "Nihonium", mass: "284", cat: "metal", r: 7, c: 14, cfg: "[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p¹", phase: "Synthetic", en: "—", melt: "700 K", boil: "1400 K", dens: "16 g/cm³", disc: "RIKEN Japan (2004)", ox: "+1", shells: "2, 8, 18, 32, 32, 18, 3", desc: "First synthetic element confirmed by a scientific team in Asia (RIKEN).", uses: "Pure academic study into trans-actinide decay pathways." },
+      { n: 114, s: "Fl", name: "Flerovium", mass: "289", cat: "metal", r: 7, c: 15, cfg: "[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p²", phase: "Synthetic", en: "—", melt: "340 K", boil: "420 K", dens: "14 g/cm³", disc: "JINR Dubna (1998)", ox: "+2", shells: "2, 8, 18, 32, 32, 18, 4", desc: "Positioned near the hypothesized center of the superheavy island of nuclear stability.", uses: "Testing predicted magic numbers of proton and neutron stability." },
+      { n: 115, s: "Mc", name: "Moscovium", mass: "288", cat: "metal", r: 7, c: 16, cfg: "[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p³", phase: "Synthetic", en: "—", melt: "670 K", boil: "1400 K", dens: "13.5 g/cm³", disc: "JINR / LLNL (2003)", ox: "+1, +3", shells: "2, 8, 18, 32, 32, 18, 5", desc: "Extremely radioactive synthetic element that decays in milliseconds.", uses: "Basic research in nuclear fusion synthesis and particle decay tracking." },
+      { n: 116, s: "Lv", name: "Livermorium", mass: "293", cat: "metal", r: 7, c: 17, cfg: "[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁴", phase: "Synthetic", en: "—", melt: "709 K", boil: "1085 K", dens: "12.9 g/cm³", disc: "JINR / LLNL (2000)", ox: "+2", shells: "2, 8, 18, 32, 32, 18, 6", desc: "Named in honor of the Lawrence Livermore National Laboratory in California.", uses: "Synthesis testing for elements at the frontier of atomic weight." },
+      { n: 117, s: "Ts", name: "Tennessine", mass: "294", cat: "halogen", r: 7, c: 18, cfg: "[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁵", phase: "Synthetic", en: "—", melt: "723 K", boil: "883 K", dens: "7.2 g/cm³", disc: "JINR / ORNL / Vanderbilt (2010)", ox: "-1, +1, +3", shells: "2, 8, 18, 32, 32, 18, 7", desc: "Synthesized utilizing rare berkelium-249 targets produced at Oak Ridge.", uses: "Study of spin-orbit splitting in heavy p-block halides." },
+      { n: 118, s: "Og", name: "Oganesson", mass: "294", cat: "noble-gas", r: 7, c: 19, cfg: "[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁶", phase: "Synthetic", en: "—", melt: "325 K (52 °C)", boil: "450 K (177 °C)", dens: "5.0 g/cm³", disc: "JINR / LLNL (2002)", ox: "0, +2, +4", shells: "2, 8, 18, 32, 32, 18, 8", desc: "Heaviest known synthetic element; relativistic smearing makes it likely a solid.", uses: "Frontier research into the outer physical boundaries of Mendeleev's periodic table." },
+
+      /* Lanthanides (Row 9, columns 5 to 19) */
+      { n: 57, s: "La", name: "Lanthanum", mass: "138.91", cat: "lanthanide", r: 9, c: 5, cfg: "[Xe] 5d¹ 6s²", phase: "Solid", en: "1.10", melt: "1193 K (920 °C)", boil: "3737 K (3464 °C)", dens: "6.162 g/cm³", disc: "C.G. Mosander (1839)", ox: "+3", shells: "2, 8, 18, 18, 9, 2", desc: "Prototype element that gives its name to the entire 15-member lanthanide series.", uses: "Hybrid car NiMH battery electrodes, studio carbon arc lighting, and camera lenses." },
+      { n: 58, s: "Ce", name: "Cerium", mass: "140.12", cat: "lanthanide", r: 9, c: 6, cfg: "[Xe] 4f¹ 5d¹ 6s²", phase: "Solid", en: "1.12", melt: "1068 K (795 °C)", boil: "3716 K (3443 °C)", dens: "6.77 g/cm³", disc: "M.H. Klaproth / J.J. Berzelius (1803)", ox: "+3, +4", shells: "2, 8, 18, 19, 9, 2", desc: "Most abundant rare-earth metal; pyrophoric sparks strike from lighter flints.", uses: "Precision optical glass polishing slurries, automotive catalytic converters, and lighter flints." },
+      { n: 59, s: "Pr", name: "Praseodymium", mass: "140.91", cat: "lanthanide", r: 9, c: 7, cfg: "[Xe] 4f³ 6s²", phase: "Solid", en: "1.13", melt: "1208 K (935 °C)", boil: "3793 K (3520 °C)", dens: "6.77 g/cm³", disc: "C.A. von Welsbach (1885)", ox: "+3", shells: "2, 8, 18, 21, 8, 2", desc: "Imparts a distinct vivid yellow-green shade to glass and protects welders' eyes.", uses: "Didymium glass safety goggles for glassblowing and aircraft engine alloy strengthens." },
+      { n: 60, s: "Nd", name: "Neodymium", mass: "144.24", cat: "lanthanide", r: 9, c: 8, cfg: "[Xe] 4f⁴ 6s²", phase: "Solid", en: "1.14", melt: "1297 K (1024 °C)", boil: "3347 K (3074 °C)", dens: "7.01 g/cm³", disc: "C.A. von Welsbach (1885)", ox: "+3", shells: "2, 8, 18, 22, 8, 2", desc: "Enables the world's most powerful commercial permanent rare-earth magnets (NdFeB).", uses: "EV drive traction motors, wind turbine generators, headphones, and MRI scanners." },
+      { n: 61, s: "Pm", name: "Promethium", mass: "145", cat: "lanthanide", r: 9, c: 9, cfg: "[Xe] 4f⁵ 6s²", phase: "Solid", en: "1.13", melt: "1315 K (1042 °C)", boil: "3273 K (3000 °C)", dens: "7.26 g/cm³", disc: "J.A. Marinsky et al. (1945)", ox: "+3", shells: "2, 8, 18, 23, 8, 2", desc: "The only purely radioactive lanthanide; emits constant beta particles.", uses: "Atomic battery pacemakers, luminous military gauges, and thickness gauges." },
+      { n: 62, s: "Sm", name: "Samarium", mass: "150.36", cat: "lanthanide", r: 9, c: 10, cfg: "[Xe] 4f⁶ 6s²", phase: "Solid", en: "1.17", melt: "1345 K (1072 °C)", boil: "2067 K (1794 °C)", dens: "7.52 g/cm³", disc: "L. de Boisbaudran (1879)", ox: "+3, +2", shells: "2, 8, 18, 24, 8, 2", desc: "Samarium-cobalt (SmCo) magnets retain magnetization up to 700 °C.", uses: "High-temperature military defense actuators, precision guitar pickups, and cancer pain relief." },
+      { n: 63, s: "Eu", name: "Europium", mass: "151.96", cat: "lanthanide", r: 9, c: 11, cfg: "[Xe] 4f⁷ 6s²", phase: "Solid", en: "1.20", melt: "1099 K (826 °C)", boil: "1802 K (1529 °C)", dens: "5.244 g/cm³", disc: "E.-A. Demarçay (1901)", ox: "+3, +2", shells: "2, 8, 18, 25, 8, 2", desc: "Produces vivid red phosphor luminescence under UV irradiation.", uses: "Euro banknote anti-counterfeiting phosphors and color television display tubes." },
+      { n: 64, s: "Gd", name: "Gadolinium", mass: "157.25", cat: "lanthanide", r: 9, c: 12, cfg: "[Xe] 4f⁷ 5d¹ 6s²", phase: "Solid", en: "1.20", melt: "1587 K (1314 °C)", boil: "3546 K (3273 °C)", dens: "7.90 g/cm³", disc: "J.C. Galissard de Marignac (1880)", ox: "+3", shells: "2, 8, 18, 25, 9, 2", desc: "Highest thermal-neutron capture cross section among stable nuclides; paramagnetic.", uses: "Intravenous MRI contrast enhancement agents and nuclear reactor shutdown rods." },
+      { n: 65, s: "Tb", name: "Terbium", mass: "158.93", cat: "lanthanide", r: 9, c: 13, cfg: "[Xe] 4f⁹ 6s²", phase: "Solid", en: "1.20", melt: "1629 K (1356 °C)", boil: "3503 K (3230 °C)", dens: "8.23 g/cm³", disc: "C.G. Mosander (1843)", ox: "+3, +4", shells: "2, 8, 18, 27, 8, 2", desc: "Produces intense pure green phosphors; expands and contracts in magnetic fields.", uses: "Terfenol-D naval sonar transducers and green phosphors in fluorescent tubes." },
+      { n: 66, s: "Dy", name: "Dysprosium", mass: "162.50", cat: "lanthanide", r: 9, c: 14, cfg: "[Xe] 4f¹⁰ 6s²", phase: "Solid", en: "1.22", melt: "1680 K (1407 °C)", boil: "2840 K (2567 °C)", dens: "8.54 g/cm³", disc: "P.E. Lecoq de Boisbaudran (1886)", ox: "+3", shells: "2, 8, 18, 28, 8, 2", desc: "Added to neodymium permanent magnets to prevent demagnetization at high heat.", uses: "Electric vehicle powertrain motors, nuclear control rods, and laser materials." },
+      { n: 67, s: "Ho", name: "Holmium", mass: "164.93", cat: "lanthanide", r: 9, c: 15, cfg: "[Xe] 4f¹¹ 6s²", phase: "Solid", en: "1.23", melt: "1734 K (1461 °C)", boil: "2993 K (2720 °C)", dens: "8.79 g/cm³", disc: "P.T. Cleve (1879)", ox: "+3", shells: "2, 8, 18, 29, 8, 2", desc: "Has the highest magnetic dipole moment of any naturally occurring pure element.", uses: "Medical Ho:YAG kidney stone laser lithotripsy and flux concentrators in magnetic poles." },
+      { n: 68, s: "Er", name: "Erbium", mass: "167.26", cat: "lanthanide", r: 9, c: 16, cfg: "[Xe] 4f¹² 6s²", phase: "Solid", en: "1.24", melt: "1802 K (1529 °C)", boil: "3141 K (2868 °C)", dens: "9.066 g/cm³", disc: "C.G. Mosander (1843)", ox: "+3", shells: "2, 8, 18, 30, 8, 2", desc: "Doped into fiber-optic amplifiers to amplify worldwide internet signals.", uses: "Erbium-doped fiber amplifiers (EDFAs) for trans-oceanic fiber internet and dermatology lasers." },
+      { n: 69, s: "Tm", name: "Thulium", mass: "168.93", cat: "lanthanide", r: 9, c: 17, cfg: "[Xe] 4f¹³ 6s²", phase: "Solid", en: "1.25", melt: "1818 K (1545 °C)", boil: "2223 K (1950 °C)", dens: "9.32 g/cm³", disc: "P.T. Cleve (1879)", ox: "+3", shells: "2, 8, 18, 31, 8, 2", desc: "Second rarest natural lanthanide after radioactive promethium.", uses: "Portable battlefield medical X-ray sources and high-efficiency surgical lasers." },
+      { n: 70, s: "Yb", name: "Ytterbium", mass: "173.05", cat: "lanthanide", r: 9, c: 18, cfg: "[Xe] 4f¹⁴ 6s²", phase: "Solid", en: "1.10", melt: "1097 K (824 °C)", boil: "1469 K (1196 °C)", dens: "6.90 g/cm³", disc: "J.C. Galissard de Marignac (1878)", ox: "+3, +2", shells: "2, 8, 18, 32, 8, 2", desc: "Used in optical lattice atomic clocks surpassing cesium standard precision.", uses: "Next-generation optical atomic clocks and stress gauges for earthquake monitoring." },
+      { n: 71, s: "Lu", name: "Lutetium", mass: "174.97", cat: "lanthanide", r: 9, c: 19, cfg: "[Xe] 4f¹⁴ 5d¹ 6s²", phase: "Solid", en: "1.27", melt: "1925 K (1652 °C)", boil: "3675 K (3402 °C)", dens: "9.841 g/cm³", disc: "G. Urbain / C.A. von Welsbach (1907)", ox: "+3", shells: "2, 8, 18, 32, 9, 2", desc: "Dense, hard terminal lanthanide element used as a catalyst in petroleum refineries.", uses: "Lutetium-177 targeted cancer radionuclide therapy and PET scan scintillator crystals." },
+
+      /* Actinides (Row 10, columns 5 to 19) */
+      { n: 89, s: "Ac", name: "Actinium", mass: "227", cat: "actinide", r: 10, c: 5, cfg: "[Rn] 6d¹ 7s²", phase: "Solid", en: "1.10", melt: "1323 K (1050 °C)", boil: "3473 K (3200 °C)", dens: "10.07 g/cm³", disc: "A.-L. Debierne (1899)", ox: "+3", shells: "2, 8, 18, 32, 18, 9, 2", desc: "Glows with an eerie intense blue luminescence in darkness due to radioactivity.", uses: "Actinium-225 targeted alpha therapy (TAT) in precision oncology medicine." },
+      { n: 90, s: "Th", name: "Thorium", mass: "232.04", cat: "actinide", r: 10, c: 6, cfg: "[Rn] 6d² 7s²", phase: "Solid", en: "1.30", melt: "2115 K (1842 °C)", boil: "5061 K (4788 °C)", dens: "11.72 g/cm³", disc: "J.J. Berzelius (1828)", ox: "+4", shells: "2, 8, 18, 32, 18, 10, 2", desc: "Three times more abundant than uranium; fertile fuel candidate for molten-salt reactors.", uses: "Liquid fluoride thorium nuclear reactors (LFTR) and high-index optical lenses." },
+      { n: 91, s: "Pa", name: "Protactinium", mass: "231.04", cat: "actinide", r: 10, c: 7, cfg: "[Rn] 5f² 6d¹ 7s²", phase: "Solid", en: "1.50", melt: "1841 K (1568 °C)", boil: "4300 K (4027 °C)", dens: "15.37 g/cm³", disc: "O. Hahn, L. Meitner (1917)", ox: "+5", shells: "2, 8, 18, 32, 20, 9, 2", desc: "Dense radioactive actinide intermediate in thorium-232 to uranium-233 breeder cycles.", uses: "Radiometric marine sediment dating in paleoceanography." },
+      { n: 92, s: "U", name: "Uranium", mass: "238.03", cat: "actinide", r: 10, c: 8, cfg: "[Rn] 5f³ 6d¹ 7s²", phase: "Solid", en: "1.38", melt: "1405.3 K (1132.2 °C)", boil: "4404 K (4131 °C)", dens: "19.1 g/cm³", disc: "M.H. Klaproth (1789)", ox: "+6, +4", shells: "2, 8, 18, 32, 21, 9, 2", desc: "Primary fissile resource powering commercial civilian nuclear electricity reactors.", uses: "Nuclear power electricity generation, tank armor penetrators, and uranium glass." },
+      { n: 93, s: "Np", name: "Neptunium", mass: "237", cat: "actinide", r: 10, c: 9, cfg: "[Rn] 5f⁴ 6d¹ 7s²", phase: "Solid", en: "1.36", melt: "917 K (644 °C)", boil: "4273 K (4000 °C)", dens: "20.45 g/cm³", disc: "E. McMillan, P. Abelson (1940)", ox: "+5", shells: "2, 8, 18, 32, 22, 9, 2", desc: "First synthetic transuranic element produced via cyclotron neutron irradiation.", uses: "Precursor material in the industrial synthesis of plutonium-238." },
+      { n: 94, s: "Pu", name: "Plutonium", mass: "244", cat: "actinide", r: 10, c: 10, cfg: "[Rn] 5f⁶ 7s²", phase: "Solid", en: "1.28", melt: "912.5 K (639.4 °C)", boil: "3501 K (3228 °C)", dens: "19.86 g/cm³", disc: "G.T. Seaborg et al. (1940)", ox: "+4", shells: "2, 8, 18, 32, 24, 8, 2", desc: "Fissile element providing decay heat for deep-space RTGs (Voyager, Curiosity).", uses: "Radioisotope thermoelectric generators (RTGs) powering interplanetary spacecraft." },
+      { n: 95, s: "Am", name: "Americium", mass: "243", cat: "actinide", r: 10, c: 11, cfg: "[Rn] 5f⁷ 7s²", phase: "Solid", en: "1.13", melt: "1449 K (1176 °C)", boil: "2880 K (2607 °C)", dens: "12 g/cm³", disc: "G.T. Seaborg et al. (1944)", ox: "+3", shells: "2, 8, 18, 32, 25, 8, 2", desc: "Provides the minute ionisation source inside commercial household smoke detectors.", uses: "Residential ionization smoke detectors and industrial thickness gauges." },
+      { n: 96, s: "Cm", name: "Curium", mass: "247", cat: "actinide", r: 10, c: 12, cfg: "[Rn] 5f⁷ 6d¹ 7s²", phase: "Solid", en: "1.28", melt: "1613 K (1340 °C)", boil: "3383 K (3110 °C)", dens: "13.51 g/cm³", disc: "G.T. Seaborg et al. (1944)", ox: "+3", shells: "2, 8, 18, 32, 25, 9, 2", desc: "Strong alpha emitter used in alpha-particle X-ray spectrometers on Mars rovers.", uses: "APXS rock mineralogy instruments on planetary Mars rovers (Curiosity, Opportunity)." },
+      { n: 97, s: "Bk", name: "Berkelium", mass: "247", cat: "actinide", r: 10, c: 13, cfg: "[Rn] 5f⁹ 7s²", phase: "Solid", en: "1.30", melt: "1259 K (986 °C)", boil: "2900 K", dens: "14.78 g/cm³", disc: "S.G. Thompson et al. (1949)", ox: "+3, +4", shells: "2, 8, 18, 32, 27, 8, 2", desc: "Synthesized in high-flux nuclear reactors at Oak Ridge to construct superheavies.", uses: "Target material to synthesize the superheavy element tennessine (117)." },
+      { n: 98, s: "Cf", name: "Californium", mass: "251", cat: "actinide", r: 10, c: 14, cfg: "[Rn] 5f¹⁰ 7s²", phase: "Solid", en: "1.30", melt: "1173 K (900 °C)", boil: "1743 K", dens: "15.1 g/cm³", disc: "S.G. Thompson et al. (1950)", ox: "+3", shells: "2, 8, 18, 32, 28, 8, 2", desc: "Prodigious emitter of neutrons; 1 microgram emits 2.3 million neutrons per second.", uses: "Commercial reactor startup sources, coal prompt gamma neutron activation analysis." },
+      { n: 99, s: "Es", name: "Einsteinium", mass: "252", cat: "actinide", r: 10, c: 15, cfg: "[Rn] 5f¹¹ 7s²", phase: "Solid", en: "1.30", melt: "1133 K (860 °C)", boil: "1269 K", dens: "8.84 g/cm³", disc: "A. Ghiorso et al. (1952)", ox: "+3", shells: "2, 8, 18, 32, 29, 8, 2", desc: "Discovered in the radioactive fallout soot of the 1952 Ivy Mike hydrogen bomb explosion.", uses: "Target element in synthesizing mendelevium and fundamental transplutonium physics." },
+      { n: 100, s: "Fm", name: "Fermium", mass: "257", cat: "actinide", r: 10, c: 16, cfg: "[Rn] 5f¹² 7s²", phase: "Solid", en: "1.30", melt: "1800 K (1527 °C)", boil: "—", dens: "—", disc: "A. Ghiorso et al. (1953)", ox: "+3", shells: "2, 8, 18, 32, 30, 8, 2", desc: "Heaviest element that can be synthesized via successive neutron capture.", uses: "Academic research into heavy actinide spontaneous nuclear fission." },
+      { n: 101, s: "Md", name: "Mendelevium", mass: "258", cat: "actinide", r: 10, c: 17, cfg: "[Rn] 5f¹³ 7s²", phase: "Solid", en: "1.30", melt: "1100 K", boil: "—", dens: "—", disc: "A. Ghiorso et al. (1955)", ox: "+3, +2", shells: "2, 8, 18, 32, 31, 8, 2", desc: "Named in honor of Dmitri Mendeleev, creator of the periodic system.", uses: "Fundamental chemical investigations of divalent actinide behaviors." },
+      { n: 102, s: "No", name: "Nobelium", mass: "259", cat: "actinide", r: 10, c: 18, cfg: "[Rn] 5f¹⁴ 7s²", phase: "Solid", en: "1.30", melt: "1100 K", boil: "—", dens: "—", disc: "JINR Dubna (1966)", ox: "+2, +3", shells: "2, 8, 18, 32, 32, 8, 2", desc: "Synthetic transuranic actinide named in honor of inventor Alfred Nobel.", uses: "Study of relativistic 7s shell orbital stabilization." },
+      { n: 103, s: "Lr", name: "Lawrencium", mass: "262", cat: "actinide", r: 10, c: 19, cfg: "[Rn] 5f¹⁴ 7s² 7p¹", phase: "Solid", en: "—", melt: "1900 K", boil: "—", dens: "—", disc: "LBNL (1961)", ox: "+3", shells: "2, 8, 18, 32, 32, 8, 3", desc: "Terminal actinide element named after cyclotron inventor Ernest O. Lawrence.", uses: "Determination of actinide vs transition metal boundary electron behaviors." }
+    ];
+
+    /* DOM Selectors */
+    const gridLayout = document.getElementById("periodicGridLayout");
+    const quickTooltip = document.getElementById("quickTooltip");
+    const ttSymbol = document.getElementById("ttSymbol");
+    const ttNumber = document.getElementById("ttNumber");
+    const ttName = document.getElementById("ttName");
+    const ttWeight = document.getElementById("ttWeight");
+    const ttCategory = document.getElementById("ttCategory");
+    const ttConfig = document.getElementById("ttConfig");
+
+    /* Modal selectors */
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const flipViewport = document.getElementById("flipViewport");
+    const modalCloseBtn = document.getElementById("modalCloseBtn");
+    const modalBackCloseBtn = document.getElementById("modalBackCloseBtn");
+    const triggerFlipBtn = document.getElementById("triggerFlipBtn");
+    const flipReturnBtn = document.getElementById("flipReturnBtn");
+
+    /* Modal card values */
+    const modalFrontCatBadge = document.getElementById("modalFrontCatBadge");
+    const modalFrontNum = document.getElementById("modalFrontNum");
+    const modalFrontSym = document.getElementById("modalFrontSym");
+    const modalFrontName = document.getElementById("modalFrontName");
+    const modalFrontMass = document.getElementById("modalFrontMass");
+    const modalFrontShells = document.getElementById("modalFrontShells");
+
+    const modalBackTitle = document.getElementById("modalBackTitle");
+    const modalBackCategory = document.getElementById("modalBackCategory");
+    const modalBackDesc = document.getElementById("modalBackDesc");
+    const dPhase = document.getElementById("dPhase");
+    const dElectro = document.getElementById("dElectro");
+    const dDensity = document.getElementById("dDensity");
+    const dMelt = document.getElementById("dMelt");
+    const dBoil = document.getElementById("dBoil");
+    const dOxidation = document.getElementById("dOxidation");
+    const dConfig = document.getElementById("dConfig");
+    const dDiscoverer = document.getElementById("dDiscoverer");
+    const dUses = document.getElementById("dUses");
+
+    const domCards = new Map();
+
+    elementsData.forEach(el => {
+      const card = document.createElement("div");
+      card.className = `element-card ${el.cat}`;
+      card.style.gridColumn = el.c;
+      card.style.gridRow = el.r;
+
+      card.innerHTML = `
+        <div class="card-top">
+          <span class="card-num">${el.n}</span>
+          <span class="card-mass">${el.mass}</span>
+        </div>
+        <div class="card-symbol">${el.s}</div>
+        <div class="card-name">${el.name}</div>
+        <div class="card-config">${el.cfg}</div>
+      `;
+
+      // HOVER Preview Handling
+      card.addEventListener("mouseenter", (e) => {
+        ttSymbol.textContent = el.s;
+        ttNumber.textContent = `#${el.n}`;
+        ttName.textContent = el.name;
+        ttWeight.textContent = `${el.mass} u`;
+        ttCategory.textContent = el.cat.replace("-", " ");
+        ttConfig.textContent = el.cfg;
+        quickTooltip.classList.add("visible");
+        positionTooltip(e);
+      });
+
+      card.addEventListener("mousemove", (e) => {
+        positionTooltip(e);
+      });
+
+      card.addEventListener("mouseleave", () => {
+        quickTooltip.classList.remove("visible");
+      });
+
+      // CLICK Handling: Open 3D Flip Card Modal
+      card.addEventListener("click", () => {
+        quickTooltip.classList.remove("visible");
+        openDetailModal(el);
+      });
+
+      gridLayout.appendChild(card);
+      domCards.set(el.n, { data: el, dom: card });
+    });
+
+    /* Tooltip dynamic screen positioning */
+    function positionTooltip(e) {
+      const offset = 14;
+      let x = e.clientX + offset;
+      let y = e.clientY + offset;
+
+      const ttWidth = quickTooltip.offsetWidth || 190;
+      const ttHeight = quickTooltip.offsetHeight || 110;
+
+      if (x + ttWidth > window.innerWidth - 12) {
+        x = e.clientX - ttWidth - offset;
+      }
+      if (y + ttHeight > window.innerHeight - 12) {
+        y = e.clientY - ttHeight - offset;
+      }
+
+      quickTooltip.style.left = `${Math.max(10, x)}px`;
+      quickTooltip.style.top = `${Math.max(10, y)}px`;
+    }
+
+    function openDetailModal(el) {
+      // Front details
+      modalFrontCatBadge.textContent = el.cat.replace("-", " ");
+      modalFrontCatBadge.className = `front-category-badge ${el.cat}`;
+      modalFrontNum.textContent = el.n;
+      modalFrontSym.textContent = el.s;
+      modalFrontName.textContent = el.name;
+      modalFrontMass.textContent = `${el.mass} u`;
+      modalFrontShells.textContent = `Bohr Orbitals: ${el.shells}`;
+
+      // Back details
+      modalBackTitle.textContent = `${el.name} (${el.s})`;
+      modalBackCategory.textContent = `${el.cat.replace("-", " ").toUpperCase()} • Atomic #${el.n}`;
+      modalBackDesc.textContent = el.desc;
+      dPhase.textContent = el.phase;
+      dElectro.textContent = el.en;
+      dDensity.textContent = el.dens;
+      dMelt.textContent = el.melt;
+      dBoil.textContent = el.boil;
+      dOxidation.textContent = el.ox;
+      dConfig.textContent = el.cfg;
+      dDiscoverer.textContent = el.disc;
+      dUses.textContent = el.uses;
+
+      // Reset flip to front
+      flipViewport.classList.remove("is-flipped");
+      modalBackdrop.classList.add("open");
+    }
+
+    function closeModal() {
+      modalBackdrop.classList.remove("open");
+      setTimeout(() => {
+        flipViewport.classList.remove("is-flipped");
+      }, 250);
+    }
+
+    // Modal Flip Controls
+    triggerFlipBtn.addEventListener("click", () => {
+      flipViewport.classList.add("is-flipped");
+    });
+
+    flipReturnBtn.addEventListener("click", () => {
+      flipViewport.classList.remove("is-flipped");
+    });
+
+    modalCloseBtn.addEventListener("click", closeModal);
+    modalBackCloseBtn.addEventListener("click", closeModal);
+
+    modalBackdrop.addEventListener("click", (e) => {
+      if (e.target === modalBackdrop) {
+        closeModal();
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modalBackdrop.classList.contains("open")) {
+        closeModal();
+      }
+    });
+
+    const legendButtons = document.querySelectorAll(".legend-pill");
+    const searchInput = document.getElementById("elementSearch");
+    let currentFilter = "all";
+
+    legendButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        legendButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.dataset.cat;
+        applyFilters();
+      });
+    });
+
+    searchInput.addEventListener("input", applyFilters);
+
+    function applyFilters() {
+      const query = searchInput.value.trim().toLowerCase();
+
+      domCards.forEach(({ data, dom }) => {
+        const matchesCategory = currentFilter === "all" || data.cat === currentFilter;
+        const matchesSearch = !query || 
+          data.name.toLowerCase().includes(query) ||
+          data.s.toLowerCase().includes(query) ||
+          data.n.toString() === query;
+
+        if (matchesCategory && matchesSearch) {
+          dom.classList.remove("dimmed");
+        } else {
+          dom.classList.add("dimmed");
+        }
+      });
+    }
+  </script>
+</body>
+</html>
